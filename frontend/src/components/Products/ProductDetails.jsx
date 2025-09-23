@@ -6,8 +6,7 @@ import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProductDetails } from "../../redux/slices/productsSlice";
 import { addToCart } from "../../redux/slices/cartSlice";
-
-
+import { Link } from "react-router-dom";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -42,27 +41,6 @@ const ProductDetails = () => {
     if (action === "minus" && quantity > 1) setQuantity((prev) => prev - 1);
   };
 
-  /*const handleAddToCart = () => {
-    setIsButtonDisabled(true);
-    dispatch(
-        addToCart({
-            productId: id,
-            quantity,
-            guestId,
-            userId: user?._id,
-        })
-    )
-    .then(() => {
-        toast.success("Product added to cart successfully!", {
-            duration: 2000,
-        });
-        setIsButtonDisabled(false);
-    })
-    .finally(() => {
-        setIsButtonDisabled(false);
-    });
-  };*/
-
   const handleAddToCart = () => {
     setIsButtonDisabled(true);
     dispatch(
@@ -77,7 +55,7 @@ const ProductDetails = () => {
       })
     )
       .then(() => {
-        toast.success("Product added to cart successfully!", {
+        toast.success("Product added to cart!", {
           duration: 2000,
         });
       })
@@ -146,6 +124,15 @@ const ProductDetails = () => {
                         </div>
                         {/** Add To Cart Function **/}
                         <button onClick={handleAddToCart} disabled={isButtonDisabled} className={`bg-black text-white py-2 px-6 rounded w-full mb-4 ${isButtonDisabled ? "cursor-not-allowed opacity-50" : "hover:bg-gray-900"}`}>{isButtonDisabled ? "Adding..." : "ADD TO CART"}</button>
+                        {/* ✅ Continue Shopping Link */}
+                        <div className="text-center mb-6">
+                          <Link
+                            to="/collections/all"   // or "/" if your homepage is the product listing
+                            className="text-blue-500 font-semibold hover:underline"
+                          >
+                            ← Continue Shopping
+                          </Link>
+                        </div>
                         <div className="mt-10 text-gray-700">
                             <h3 className="text-xl font-bold mb-4">Characteristics:</h3>
                             <table className="w-full text-left text-sm text-gray-600">

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { createCheckout, setCheckout } from "../../redux/slices/checkoutSlice";
 import axios from "axios";
 import { updateCartItemQuantity, removeFromCart } from "../../redux/slices/cartSlice";
+import { Link } from "react-router-dom";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -306,6 +307,14 @@ const Checkout = () => {
         <div className="flex justify-between items-center text-lg mt-4 border-t pt-4 font-bold">
           <p>Total</p>
           <p>${grandTotal.toFixed(2)}</p>
+        </div>
+        <div className="text-center mb-6">
+          <Link
+            to="/collections/all"
+            className="text-blue-500 font-semibold hover:underline"
+          >
+            ← Continue Shopping
+          </Link>
         </div>
       </div>
     </div>

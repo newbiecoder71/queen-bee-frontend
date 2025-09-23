@@ -1,12 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-// Helper function to load cart from localStorage
-/*const loadCartFromStorage = () => {
-    const storedCart = localStorage.getItem("cart");
-    return storedCart ? JSON.parse(storedCart) : { products: [] };
-};*/
-
 const loadCartFromStorage = () => {
     try {
       const storedCart = JSON.parse(localStorage.getItem("cart"));
@@ -25,7 +19,7 @@ const saveCartToStorage = (cart) => {
     localStorage.setItem("cart", JSON.stringify(cart));
 };
 
-// Fethc cart for a user or guest
+// Fetch cart for a user or guest
 export const fetchCart = createAsyncThunk(
     "cart/fetchCart",
     async ({ userId, guestId }, { rejectWithValue }) => {
@@ -93,45 +87,50 @@ export const updateCartItemQuantity = createAsyncThunk(
 export const removeFromCart = createAsyncThunk(
     "cart/removeFromCart",
     async ({ productId }, thunkAPI) => {
-        try {
-            const userId = localStorage.getItem("userId");
-            const guestId = localStorage.getItem("guestId");
-
-            const { data } = await axios.delete(
-                `${import.meta.env.VITE_BACKEND_URL}/api/carts`, {
-                data: {
-                        productId,
-                        userId: userId || undefined,
-                        guestId: userId ? undefined : guestId,
-                },
-            });
-            return data;
-        } catch (error) {
-          return thunkAPI.rejectWithValue(error.response?.data?.message || "Error removing item from cart");
-        }
+      try {
+        const userId = localStorage.getItem("userId");
+        const guestId = localStorage.getItem("guestId");
+  
+        const { data } = await axios.delete(
+          `${import.meta.env.VITE_BACKEND_URL}/api/carts`,
+          {
+            data: {
+              productId,
+              userId: userId || undefined,
+              guestId: userId ? undefined : guestId,
+            },
+          }
+        );
+  
+        return data;
+      } catch (error) {
+        return thunkAPI.rejectWithValue(
+          error.response?.data?.message || "Error removing item from cart"
+        );
+      }
     }
 );
 
 // Merge guest cart with user cart
 export const mergeCart = createAsyncThunk(
     "cart/mergeCart",
-    async ({ guestId, user }, { rejectWithValue }) => {
-        try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/carts/merge`,
-                 { guestId, user },
-                 {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-                    },
-                 }
-            );
-            return response.data;
-        } catch (error) {
-          return rejectWithValue(error.response.data);
-        }
+    async ({ guestId, userId }, { rejectWithValue }) => {
+      try {
+        const response = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/api/carts/merge`,
+          { guestId, userId },  // ✅ just send userId
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+            },
+          }
+        );
+        return response.data;
+      } catch (error) {
+        return rejectWithValue(error.response?.data || { message: "Failed to merge cart" });
+      }
     }
-);
+);  
 
 const cartSlice = createSlice({
     name: "cart",
@@ -206,9 +205,10 @@ const cartSlice = createSlice({
             })
             .addCase(mergeCart.fulfilled, (state, action) => {
                 state.loading = false;
-                state.cart = action.payload;
-                saveCartToStorage(action.payload);
-            })
+                const mergedCart = action.payload.cart || action.payload;  // ✅ handle both cases
+                state.cart = mergedCart;
+                saveCartToStorage(mergedCart);
+            })              
             .addCase(mergeCart.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload?.message || "Failed to merge cart";
