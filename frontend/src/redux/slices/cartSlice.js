@@ -46,8 +46,8 @@ export const addToCart = createAsyncThunk(
                 `${import.meta.env.VITE_BACKEND_URL}/api/carts`, {
                     productId,
                     quantity,
-                    userId,
-                    guestId,                   
+                    userId: userId || undefined,
+                    guestId: userId ? undefined : guestId,
                 }
             );
             if (data.guestId) {
@@ -144,6 +144,14 @@ const cartSlice = createSlice({
             state.cart = { products: [] };
             localStorage.removeItem("cart");
         },
+        loadCartFromLocalStorage: (state) => {
+            const storedCart = JSON.parse(localStorage.getItem("cart"));
+            if (storedCart && Array.isArray(storedCart.products)) {
+                state.cart = storedCart;
+            } else {
+                state.cart = { products: [] };
+            }
+        },        
     },
     extraReducers: (builder) => {
         builder
@@ -216,5 +224,5 @@ const cartSlice = createSlice({
     },
 });
 
-export const { clearCart } = cartSlice.actions;
+export const { clearCart, loadCartFromLocalStorage } = cartSlice.actions;
 export default cartSlice.reducer;

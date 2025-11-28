@@ -9,29 +9,37 @@ const CartContents = ({ cart, userId, guestId }) => {
 
   const handleAddToCart = (productId, delta, quantity) => {
     const newQuantity = quantity + delta;
+  
     if (newQuantity >= 1) {
-        dispatch(
-            updateCartItemQuantity({
-                productId,
-                quantity: newQuantity,
-                guestId,
-                userId,
-            })
-        );
+      const userIdLS = localStorage.getItem("userId");
+      const guestIdLS = localStorage.getItem("guestId");
+  
+      dispatch(
+        updateCartItemQuantity({
+          productId,
+          quantity: newQuantity,
+  
+          // SAME LOGIC AS PRODUCT DETAILS
+          userId: userIdLS || undefined,
+          guestId: userIdLS ? undefined : guestIdLS,
+        })
+      );
     }
-  };
+  };  
 
   const handleRemoveFromCart = (productId) => {
     dispatch(
-        removeFromCart({
-            productId,
-        })
-    );
+      removeFromCart({
+        productId,
+        userId: localStorage.getItem("userId") || undefined,
+        guestId: localStorage.getItem("userId") ? undefined : localStorage.getItem("guestId"),
+      })
+    );    
   }
   // --- subtotal + tax calculations ---
   const subtotal =
   cart?.products?.reduce((sum, p) => sum + p.price * p.quantity, 0) || 0;
-  const taxRate = 0.07; // 7% tax
+  const taxRate = 0.081; // 8.1% tax
   const taxAmount = subtotal * taxRate;
   const grandTotal = subtotal + taxAmount;
 
@@ -102,7 +110,7 @@ const CartContents = ({ cart, userId, guestId }) => {
              <span>${subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="font-medium">Tax (7%):</span>
+            <span className="font-medium">Tax (8.1%):</span>
             <span>${taxAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-lg">

@@ -33,7 +33,7 @@ const Checkout = () => {
 
   // Compute totals
   const subtotal = cart?.totalPrice || 0;
-  const tax = +(subtotal * 0.07).toFixed(2);
+  const tax = +(subtotal * 0.081).toFixed(2);
   const grandTotal = +(subtotal + tax).toFixed(2);
 
   // Create checkout
@@ -297,7 +297,7 @@ const Checkout = () => {
           <p>${subtotal.toFixed(2)}</p>
         </div>
         <div className="flex justify-between items-center text-lg mb-2">
-          <p>Tax (7%)</p>
+          <p>Tax (8.1%)</p>
           <p>${tax.toFixed(2)}</p>
         </div>
         <div className="flex justify-between items-center text-lg">

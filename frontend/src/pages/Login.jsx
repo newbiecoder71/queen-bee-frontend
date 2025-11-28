@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import login from "/images/IMG_1593.jpg";
 import { loginUser, clearError } from "../redux/slices/authSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { mergeCart } from "../redux/slices/cartSlice";
+import { mergeCart, fetchCart } from "../redux/slices/cartSlice";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -19,11 +19,37 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      if (cart?.products?.length > 0 && guestId) {
-        dispatch(mergeCart({ guestId, userId: user._id })).then(() => {
-          navigate(isCheckoutRedirect ? "/checkout" : "/");
+      // 🟢 Load the user's real cart from the database immediately
+      dispatch(fetchCart({ userId: user._id }));
+
+      if (guestId) {
+        dispatch(fetchCart({ guestId })).then((res) => {
+      
+          // Check if the guest cart actually exists in MongoDB
+          if (res?.payload?.products?.length > 0) {
+      
+            // Merge guest → user
+            dispatch(mergeCart({ guestId, userId: user._id })).then(() => {
+      
+              // Remove guestId so user is no longer treated as a guest
+              localStorage.removeItem("guestId");
+      
+              // Load the merged user cart from DB
+              dispatch(fetchCart({ userId: user._id }));
+      
+              navigate(isCheckoutRedirect ? "/checkout" : "/");
+            });
+      
+          } else {
+            // No usable guest cart → load user cart normally
+            dispatch(fetchCart({ userId: user._id }));
+            navigate(isCheckoutRedirect ? "/checkout" : "/");
+          }
         });
+      
       } else {
+        // No guestId at all → normal login
+        dispatch(fetchCart({ userId: user._id }));
         navigate(isCheckoutRedirect ? "/checkout" : "/");
       }
     }

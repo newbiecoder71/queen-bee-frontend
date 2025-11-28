@@ -22,11 +22,9 @@ const ProductDetails = () => {
   //const productFetchId = productId || id;
 
   useEffect(() => {
-    if (id) {
-        dispatch(fetchProductDetails(id));
-    } else {
-        console.warn("Product ID is missing from URL");
-    }
+    if (!id) return; // ignore early renders
+
+    dispatch(fetchProductDetails(id));
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -43,6 +41,11 @@ const ProductDetails = () => {
 
   const handleAddToCart = () => {
     setIsButtonDisabled(true);
+  
+    // 🟢 Always pull these directly from localStorage
+    const userId = localStorage.getItem("userId");
+    const guestId = localStorage.getItem("guestId");
+  
     dispatch(
       addToCart({
         productId: id,
@@ -50,10 +53,13 @@ const ProductDetails = () => {
         image: selectedProduct.images[0]?.url,
         price: selectedProduct.price,
         quantity,
-        guestId,
-        userId: user?._id,
+  
+        // 🟢 Critical logic:
+        userId: userId || undefined,
+        guestId: userId ? undefined : guestId,
       })
     )
+      .unwrap()
       .then(() => {
         toast.success("Product added to cart!", {
           duration: 2000,
@@ -66,7 +72,7 @@ const ProductDetails = () => {
       .finally(() => {
         setIsButtonDisabled(false);
       });
-  };
+  };  
 
   if (loading) {
     return <p>Loading product details...</p>;
