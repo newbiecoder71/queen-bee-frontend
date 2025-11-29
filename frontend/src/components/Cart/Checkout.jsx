@@ -1,19 +1,27 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import PayPalButton from "./PayPalButton";
 import { useDispatch, useSelector } from "react-redux";
-import { createCheckout, setCheckout } from "../../redux/slices/checkoutSlice";
+import {
+  createCheckout,
+  setCheckout,
+} from "../../redux/slices/checkoutSlice";
 import axios from "axios";
-import { updateCartItemQuantity, removeFromCart } from "../../redux/slices/cartSlice";
+import {
+  updateCartItemQuantity,
+  removeFromCart,
+} from "../../redux/slices/cartSlice";
 import { Link } from "react-router-dom";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
   const { cart, loading, error } = useSelector((state) => state.cart);
   const { user } = useSelector((state) => state.auth);
 
   const [checkoutId, setCheckoutId] = useState(null);
+
   const [shippingAddress, setShippingAddress] = useState({
     firstName: "",
     lastName: "",
@@ -24,19 +32,36 @@ const Checkout = () => {
     phoneNumber: "",
   });
 
-  // Ensure cart is loaded
+  /* ---------------------------------------------------------
+   * SAFE CART CHECK (avoids redirect flickering)
+   * --------------------------------------------------------- */
   useEffect(() => {
-    if (!cart || !cart.products || cart.products.length === 0) {
+    if (loading) return; // don't check yet
+
+    // if user removed items and cart is now empty, redirect home
+    if (!cart || !Array.isArray(cart.products) || cart.products.length === 0) {
       navigate("/");
     }
-  }, [cart, navigate]);
+  }, [cart, loading, navigate]);
 
-  // Compute totals
-  const subtotal = cart?.totalPrice || 0;
-  const tax = +(subtotal * 0.081).toFixed(2);
+  /* ---------------------------------------------------------
+   * TOTALS CALCULATION (matches backend tax: 8.1%)
+   * --------------------------------------------------------- */
+  const subtotal = useMemo(() => {
+    if (!cart || !cart.products) return 0;
+    return cart.products.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+  }, [cart]);
+
+  const TAX_RATE = 0.081;
+  const tax = +(subtotal * TAX_RATE).toFixed(2);
   const grandTotal = +(subtotal + tax).toFixed(2);
 
-  // Create checkout
+  /* ---------------------------------------------------------
+   * CREATE CHECKOUT (Step 1)
+   * --------------------------------------------------------- */
   const handleCreateCheckout = async (e) => {
     e.preventDefault();
     if (!cart || cart.products.length === 0) return;
@@ -57,68 +82,104 @@ const Checkout = () => {
     }
   };
 
-  // Handle PayPal success
+  /* ---------------------------------------------------------
+   * PAYPAL SUCCESS → Mark checkout paid (Step 2)
+   * --------------------------------------------------------- */
   const handlePaymentSuccess = async (details) => {
     try {
       await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/pay`,
-        { paymentStatus: "paid", paymentDetails: details },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("userToken")}` },
+          paymentStatus: "paid",
+          paymentDetails: details,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+          },
         }
       );
 
       await handleFinalizeCheckout(checkoutId);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error("Payment success error:", err);
     }
   };
 
-  // Finalize checkout
+  /* ---------------------------------------------------------
+   * FINALIZE CHECKOUT → Create Order (Step 3)
+   * --------------------------------------------------------- */
   const handleFinalizeCheckout = async (checkoutId) => {
     try {
       const { data } = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/finalize`,
         {},
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("userToken")}` },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+          },
         }
       );
 
       dispatch(setCheckout(data));
       navigate("/order-confirmation");
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error("Finalize checkout error:", err);
     }
   };
 
-  // Quantity change
-  const handleQuantityChange = (productId, currentQuantity, change) => {
-    const newQuantity = currentQuantity + change;
-    if (newQuantity < 1) return;
-    dispatch(updateCartItemQuantity({ productId, quantity: newQuantity }));
+  /* ---------------------------------------------------------
+   * CHANGE QUANTITY INSIDE CHECKOUT
+   * --------------------------------------------------------- */
+  const handleQuantityChange = (productId, currentQuantity, delta) => {
+    const newQty = currentQuantity + delta;
+    if (newQty < 1) return;
+
+    dispatch(
+      updateCartItemQuantity({
+        productId,
+        quantity: newQty,
+      })
+    );
   };
 
-  // Remove product
+  /* ---------------------------------------------------------
+   * REMOVE FROM CART INSIDE CHECKOUT
+   * --------------------------------------------------------- */
   const handleRemove = (productId) => {
     dispatch(removeFromCart({ productId }));
   };
 
-  if (loading) return <p>Loading cart ...</p>;
-  if (error) return <p>Error: {error}</p>;
+  /* ---------------------------------------------------------
+   * LOADING / ERROR HANDLING
+   * --------------------------------------------------------- */
+  if (loading) return <p className="text-center py-6">Loading cart...</p>;
+
+  if (error)
+    return (
+      <p className="text-center text-red-600 py-6">
+        Error loading cart: {error}
+      </p>
+    );
+
   if (!cart || !cart.products || cart.products.length === 0) {
-    return <p>Your cart is empty.</p>;
+    return <p className="text-center py-6">Your cart is empty.</p>;
   }
 
+  /* ---------------------------------------------------------
+   * RENDER CHECKOUT PAGE
+   * --------------------------------------------------------- */
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto py-10 px-6 tracking-tighter">
-      {/* Left Section */}
+      {/* ---------------- LEFT: CONTACT + SHIPPING ---------------- */}
       <div className="bg-white rounded-lg p-6">
         <h2 className="text-2xl uppercase mb-6">Checkout</h2>
 
         {/* FORM */}
         <form onSubmit={handleCreateCheckout}>
           <h3 className="text-lg mb-4">Contact Details</h3>
+
+          {/* Email (disabled) */}
           <div className="mb-4">
             <label className="block text-gray-700">Email</label>
             <input
@@ -129,100 +190,122 @@ const Checkout = () => {
             />
           </div>
 
+          {/* ---------------- SHIPPING FIELDS ---------------- */}
           <h3 className="text-lg mb-4">Delivery</h3>
+
+          {/* First + Last Name */}
           <div className="mb-4 grid grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-700">First Name</label>
               <input
-                type="text"
+                required
                 value={shippingAddress.firstName}
                 onChange={(e) =>
-                  setShippingAddress({ ...shippingAddress, firstName: e.target.value })
+                  setShippingAddress({
+                    ...shippingAddress,
+                    firstName: e.target.value,
+                  })
                 }
                 className="w-full p-2 border rounded"
-                required
               />
             </div>
             <div>
               <label className="block text-gray-700">Last Name</label>
               <input
-                type="text"
+                required
                 value={shippingAddress.lastName}
                 onChange={(e) =>
-                  setShippingAddress({ ...shippingAddress, lastName: e.target.value })
+                  setShippingAddress({
+                    ...shippingAddress,
+                    lastName: e.target.value,
+                  })
                 }
                 className="w-full p-2 border rounded"
-                required
               />
             </div>
           </div>
 
+          {/* Address */}
           <div className="mb-4">
             <label className="block text-gray-700">Address</label>
             <input
-              type="text"
+              required
               value={shippingAddress.address}
               onChange={(e) =>
-                setShippingAddress({ ...shippingAddress, address: e.target.value })
+                setShippingAddress({
+                  ...shippingAddress,
+                  address: e.target.value,
+                })
               }
               className="w-full p-2 border rounded"
-              required
             />
           </div>
 
+          {/* City + Zip */}
           <div className="mb-4 grid grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-700">City</label>
               <input
-                type="text"
+                required
                 value={shippingAddress.city}
                 onChange={(e) =>
-                  setShippingAddress({ ...shippingAddress, city: e.target.value })
+                  setShippingAddress({
+                    ...shippingAddress,
+                    city: e.target.value,
+                  })
                 }
                 className="w-full p-2 border rounded"
-                required
               />
             </div>
             <div>
               <label className="block text-gray-700">Zip Code</label>
               <input
-                type="text"
+                required
                 value={shippingAddress.zipCode}
                 onChange={(e) =>
-                  setShippingAddress({ ...shippingAddress, zipCode: e.target.value })
+                  setShippingAddress({
+                    ...shippingAddress,
+                    zipCode: e.target.value,
+                  })
                 }
                 className="w-full p-2 border rounded"
-                required
               />
             </div>
           </div>
 
+          {/* Country */}
           <div className="mb-4">
             <label className="block text-gray-700">Country</label>
             <input
-              type="text"
+              required
               value={shippingAddress.country}
               onChange={(e) =>
-                setShippingAddress({ ...shippingAddress, country: e.target.value })
+                setShippingAddress({
+                  ...shippingAddress,
+                  country: e.target.value,
+                })
               }
               className="w-full p-2 border rounded"
-              required
             />
           </div>
 
+          {/* Phone */}
           <div className="mb-4">
             <label className="block text-gray-700">Phone Number</label>
             <input
-              type="text"
+              required
               value={shippingAddress.phoneNumber}
               onChange={(e) =>
-                setShippingAddress({ ...shippingAddress, phoneNumber: e.target.value })
+                setShippingAddress({
+                  ...shippingAddress,
+                  phoneNumber: e.target.value,
+                })
               }
               className="w-full p-2 border rounded"
-              required
             />
           </div>
 
+          {/* BUTTON: Continue to Payment */}
           <div className="mt-6">
             {!checkoutId ? (
               <button
@@ -234,6 +317,7 @@ const Checkout = () => {
             ) : (
               <div>
                 <h3 className="text-lg mb-4">Pay with PayPal</h3>
+
                 <PayPalButton
                   amount={grandTotal}
                   checkoutId={checkoutId}
@@ -246,39 +330,57 @@ const Checkout = () => {
         </form>
       </div>
 
-      {/* Right Section - Order Summary */}
+      {/* ---------------- RIGHT: ORDER SUMMARY ---------------- */}
       <div className="bg-gray-50 p-6 rounded-lg">
         <h3 className="text-lg mb-4">Order Summary</h3>
+
         <div className="border-t py-4 mb-4">
-          {cart.products.map((product, index) => (
-            <div key={index} className="flex items-start justify-between py-2 border-b">
+          {cart.products.map((product) => (
+            <div
+              key={product.productId}
+              className="flex items-start justify-between py-2 border-b"
+            >
               <div className="flex items-start">
                 <img
                   src={product.image}
                   alt={product.name}
-                  className="w-20 h-24 object-cover mr-4"
+                  className="w-20 h-24 object-cover mr-4 rounded"
                 />
                 <div>
                   <h3 className="text-md">{product.name}</h3>
+
+                  {/* Qty Buttons */}
                   <div className="flex items-center space-x-2 mt-2">
                     <button
                       onClick={() =>
-                        handleQuantityChange(product.productId, product.quantity, -1)
+                        handleQuantityChange(
+                          product.productId,
+                          product.quantity,
+                          -1
+                        )
                       }
                       className="px-2 bg-gray-200 rounded"
                     >
                       -
                     </button>
+
                     <span>{product.quantity}</span>
+
                     <button
                       onClick={() =>
-                        handleQuantityChange(product.productId, product.quantity, 1)
+                        handleQuantityChange(
+                          product.productId,
+                          product.quantity,
+                          1
+                        )
                       }
                       className="px-2 bg-gray-200 rounded"
                     >
                       +
                     </button>
                   </div>
+
+                  {/* Remove */}
                   <button
                     onClick={() => handleRemove(product.productId)}
                     className="text-red-500 text-sm mt-2"
@@ -287,11 +389,15 @@ const Checkout = () => {
                   </button>
                 </div>
               </div>
-              <p className="text-xl">${Number(product.price).toFixed(2)}</p>
+
+              <p className="text-xl">
+                ${Number(product.price).toFixed(2)}
+              </p>
             </div>
           ))}
         </div>
 
+        {/* Totals */}
         <div className="flex justify-between items-center text-lg mb-2">
           <p>Subtotal</p>
           <p>${subtotal.toFixed(2)}</p>
@@ -304,11 +410,13 @@ const Checkout = () => {
           <p>Shipping</p>
           <p>Free</p>
         </div>
+
         <div className="flex justify-between items-center text-lg mt-4 border-t pt-4 font-bold">
           <p>Total</p>
           <p>${grandTotal.toFixed(2)}</p>
         </div>
-        <div className="text-center mb-6">
+
+        <div className="text-center mt-6">
           <Link
             to="/collections/all"
             className="text-blue-500 font-semibold hover:underline"
