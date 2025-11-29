@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import login from "/images/IMG_1593.jpg";
 import { loginUser, clearError } from "../redux/slices/authSlice";
@@ -11,49 +12,58 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, guestId, error, loading } = useSelector((state) => state.auth);
-  const { cart } = useSelector((state) => state.cart);
+  const { user, error, loading } = useSelector((state) => state.auth);
 
   const redirect = new URLSearchParams(location.search).get("redirect") || "/";
   const isCheckoutRedirect = redirect.includes("checkout");
 
   useEffect(() => {
-    if (user) {
-      // 🟢 Load the user's real cart from the database immediately
-      dispatch(fetchCart({ userId: user._id }));
-
-      if (guestId) {
-        dispatch(fetchCart({ guestId })).then((res) => {
-      
-          // Check if the guest cart actually exists in MongoDB
-          if (res?.payload?.products?.length > 0) {
-      
-            // Merge guest → user
-            dispatch(mergeCart({ guestId, userId: user._id })).then(() => {
-      
-              // Remove guestId so user is no longer treated as a guest
-              localStorage.removeItem("guestId");
-      
-              // Load the merged user cart from DB
-              dispatch(fetchCart({ userId: user._id }));
-      
-              navigate(isCheckoutRedirect ? "/checkout" : "/");
-            });
-      
-          } else {
-            // No usable guest cart → load user cart normally
-            dispatch(fetchCart({ userId: user._id }));
-            navigate(isCheckoutRedirect ? "/checkout" : "/");
-          }
-        });
-      
-      } else {
-        // No guestId at all → normal login
-        dispatch(fetchCart({ userId: user._id }));
-        navigate(isCheckoutRedirect ? "/checkout" : "/");
-      }
+    if (!user) return;
+  
+    const userId = user._id;
+    const storedGuestId = localStorage.getItem("guestId");
+  
+    // 1️⃣ Load the user cart instantly
+    dispatch(fetchCart({ userId }));
+  
+    // 2️⃣ No guest cart? Done.
+    if (!storedGuestId) {
+      navigate(isCheckoutRedirect ? "/checkout" : "/");
+      return;
     }
-  }, [user, guestId, cart, navigate, isCheckoutRedirect, dispatch]);
+  
+    // 3️⃣ FETCH GUEST CART *WITHOUT TOUCHING REDUX*
+    axios
+      .get(`${import.meta.env.VITE_BACKEND_URL}/api/carts`, {
+        params: { guestId: storedGuestId },
+      })
+      .then((res) => {
+        const guestCart = res.data;
+  
+        // 4️⃣ If empty - just load user cart and move on
+        if (!guestCart?.products?.length) {
+          navigate(isCheckoutRedirect ? "/checkout" : "/");
+          return;
+        }
+  
+        // 5️⃣ Merge guest cart → user cart
+        dispatch(mergeCart({ guestId: storedGuestId, userId }))
+          .unwrap()
+          .then(() => {
+            // 6️⃣ Remove guest ID AFTER merge
+            localStorage.removeItem("guestId");
+  
+            // 7️⃣ Reload user cart from Mongo
+            dispatch(fetchCart({ userId }));
+  
+            navigate(isCheckoutRedirect ? "/checkout" : "/");
+          });
+      })
+      .catch(() => {
+        // Guest cart load failed → fallback to user cart
+        navigate(isCheckoutRedirect ? "/checkout" : "/");
+      });
+  }, [user]);      
 
   const handleSubmit = (e) => {
     e.preventDefault();

@@ -147,7 +147,7 @@ const authSlice = createSlice({
         localStorage.setItem("userToken", action.payload.token);
 
         /* Remove guestId (SUPER IMPORTANT) */
-        localStorage.removeItem("guestId");
+        // localStorage.removeItem("guestId");
         state.guestId = null;  // <- Without this Redux still thinks you're a guest
       })
 

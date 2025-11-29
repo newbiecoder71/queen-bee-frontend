@@ -14,7 +14,6 @@ const ProductDetails = () => {
   const { selectedProduct, loading, error } = useSelector(
     (state) => state.products
   );
-  const { user, guestId } = useSelector((state) => state.auth);
   const [mainImage, setMainImage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
