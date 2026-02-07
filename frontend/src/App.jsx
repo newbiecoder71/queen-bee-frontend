@@ -1,3 +1,5 @@
+import React from "react";
+import ComingSoon from "./pages/ComingSoon";
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import UserLayout from "./components/Layout/UserLayout";
 import Home from "./pages/Home";
@@ -35,6 +37,19 @@ import { Provider } from "react-redux";
 import store from "./redux/store";
 
 const App = () => {
+  // 🔒 Launch guard
+  const isProd = import.meta.env.PROD;
+  const liveSite = String(import.meta.env.VITE_LIVE_SITE).toLowerCase() === "true";
+
+  // Force Coming Soon in production until you flip VITE_LIVE_SITE=true
+  if (isProd && !liveSite) {
+    return (
+      <Provider store={store}>
+        <ComingSoon />
+      </Provider>
+    );
+  }
+  
   return (
     <Provider store={store}>
       <BrowserRouter>
