@@ -37,7 +37,7 @@ import { Provider } from "react-redux";
 import store from "./redux/store";
 
 const App = () => {
-  // 🔒 Launch guard
+  // 🔒 Launch guard -- This block of code is used when site needs maintenance in the future.  You just change the env var in Vercel to false.
   const isProd = import.meta.env.PROD;
   const liveSite = String(import.meta.env.VITE_LIVE_SITE).toLowerCase() === "true";
 
@@ -49,7 +49,7 @@ const App = () => {
       </Provider>
     );
   }
-  
+
   return (
     <Provider store={store}>
       <BrowserRouter>
