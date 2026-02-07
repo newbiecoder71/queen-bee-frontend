@@ -6,8 +6,8 @@ import {
   fetchClasses,
   rsvpToClass,
 } from "../redux/slices/classesSlice";
-import ClassesCalendarModal from "../components/classes/ClassesCalendarModal";
-import AdminClassEditorModal from "../components/classes/AdminClassEditorModal";
+import ClassesCalendarModal from "../components/Classes/ClassesCalendarModal";
+import AdminClassEditorModal from "../components/Classes/AdminClassEditorModal";
 
 const ClassesPage = () => {
   const dispatch = useDispatch();
