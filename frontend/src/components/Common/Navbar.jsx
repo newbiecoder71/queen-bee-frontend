@@ -4,36 +4,55 @@ import {
   HiOutlineShoppingBag,
   HiBars3BottomRight,
 } from "react-icons/hi2";
+import { IoMdClose } from "react-icons/io";
+import { useState, useMemo } from "react";
+import { useSelector } from "react-redux";
+
 import SearchBar from "./SearchBar";
 import CartDrawer from "../Layout/CartDrawer";
-import { useState, useMemo } from "react";
-import { IoMdClose } from "react-icons/io";
-import { useSelector } from "react-redux";
 
 const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [navDrawerOpen, setNavDrawerOpen] = useState(false);
 
+  // desktop dropdown
+  const [shopOpen, setShopOpen] = useState(false);
+
+  // mobile collapsible section
+  const [mobileShopOpen, setMobileShopOpen] = useState(false);
+
   const { cart } = useSelector((state) => state.cart);
   const { user } = useSelector((state) => state.auth);
 
-  /* -------------------------------------------------------------
-     MEMOIZED CART ITEM COUNT
-     - Prevents double renders
-     - Prevents double console logs
-     - Ensures correct real-time cart count
-  ------------------------------------------------------------- */
   const cartItemCount = useMemo(() => {
     if (!Array.isArray(cart?.products)) return 0;
-
-    return cart.products.reduce(
-      (sum, item) => sum + (item.quantity || 0),
-      0
-    );
+    return cart.products.reduce((sum, item) => sum + (item.quantity || 0), 0);
   }, [cart]);
 
   const toggleNavDrawer = () => setNavDrawerOpen((v) => !v);
   const toggleCartDrawer = () => setDrawerOpen((v) => !v);
+
+  // Shop links (single source of truth)
+  const shopLinks = [
+    { label: "Fabric", to: "/collections/all?category=Fabric" },
+    { label: "Notions", to: "/collections/all?category=Notions" },
+    { label: "Patterns", to: "/collections/all?category=Patterns" },
+    { label: "Books", to: "/collections/all?category=Books" },
+    { label: "Kits", to: "/collections/all?category=Kits" },
+  ];
+
+  // Top-level links you asked for
+  const mainLinks = [
+    { label: "Classes", to: "/classes" },
+    { label: "Services", to: "/services" },
+    { label: "About Us", to: "/about" },
+    { label: "Contact Us", to: "/contact" },
+  ];
+
+  const closeMobileMenu = () => {
+    setNavDrawerOpen(false);
+    setMobileShopOpen(false);
+  };
 
   return (
     <>
@@ -45,39 +64,60 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* Center Navigation */}
-        <div className="hidden md:flex space-x-6">
-          <Link
-            to="/collections/all?category=Fabric"
-            className="text-gray-700 hover:text-black text-sm font-medium uppercase"
+        {/* Center Navigation (Desktop) */}
+        <div className="hidden md:flex items-center space-x-6">
+          {/* SHOP DROPDOWN */}
+          <div
+            className="relative"
+            onMouseEnter={() => setShopOpen(true)}
+            onMouseLeave={() => setShopOpen(false)}
           >
-            Fabric
-          </Link>
-          <Link
-            to="/collections/all?category=Notions"
-            className="text-gray-700 hover:text-black text-sm font-medium uppercase"
-          >
-            Notions
-          </Link>
-          <Link
-            to="/collections/all?category=Patterns"
-            className="text-gray-700 hover:text-black text-sm font-medium uppercase"
-          >
-            Patterns
-          </Link>
-          <Link
-            to="/collections/all?category=Books"
-            className="text-gray-700 hover:text-black text-sm font-medium uppercase"
-          >
-            Books
-          </Link>
-          <Link
-            to="/collections/all?category=Kits"
-            className="text-gray-700 hover:text-black text-sm font-medium uppercase"
-          >
-            Kits
-          </Link>
+            <button
+              type="button"
+              className="text-gray-700 hover:text-black text-sm font-medium uppercase inline-flex items-center gap-2"
+              aria-haspopup="menu"
+              aria-expanded={shopOpen}
+            >
+              Shop
+              <span className={`transition-transform ${shopOpen ? "rotate-180" : ""}`}>
+                ▾
+              </span>
+            </button>
 
+            {shopOpen && (
+              <div
+                className="absolute left-0 top-full mt-0 w-48 rounded border bg-white shadow-lg z-50"
+                role="menu"
+              >
+                <div className="py-2">
+                  {shopLinks.map((l) => (
+                    <Link
+                      key={l.label}
+                      to={l.to}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black"
+                      role="menuitem"
+                      onClick={() => setShopOpen(false)}
+                    >
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Other nav links */}
+          {mainLinks.map((l) => (
+            <Link
+              key={l.label}
+              to={l.to}
+              className="text-gray-700 hover:text-black text-sm font-medium uppercase"
+            >
+              {l.label}
+            </Link>
+          ))}
+
+          {/* My Quilts only if logged in */}
           {user && (
             <Link
               to="/my-quilts"
@@ -99,9 +139,25 @@ const Navbar = () => {
             </Link>
           )}
 
-          <Link to="/profile" className="hover:text-black">
-            <HiOutlineUser className="h-7 w-7 text-gray-700" />
-          </Link>
+          {/* Profile Icon + Tooltip */}
+          <div className="relative group">
+            <Link
+              to={user ? "/profile" : "/login"}
+              className="hover:text-black inline-flex"
+              aria-label={user ? `Hello, ${user.name}` : "Login"}
+            >
+              <HiOutlineUser className="h-7 w-7 text-gray-700 translate-y-1" />
+            </Link>
+
+            <div
+              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 whitespace-nowrap
+                        rounded bg-blue-700 px-3 py-1 text-xs text-white shadow-md
+                        opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                        pointer-events-none z-50"
+            >
+              {user ? `Hello, ${user.name.trim().split(/\s+/)[0]}` : "Login"}
+            </div>
+          </div>
 
           {/* Cart Icon */}
           <button onClick={toggleCartDrawer} className="relative hover:text-black">
@@ -144,42 +200,58 @@ const Navbar = () => {
         <div className="p-4">
           <h2 className="text-xl font-semibold mb-4">Menu</h2>
 
-          <nav className="space-y-4">
-            <Link
-              to="/collections/all?category=Fabric"
-              onClick={toggleNavDrawer}
-              className="block text-gray-600 hover:text-black"
+          <nav className="space-y-2">
+            {/* Mobile SHOP collapsible */}
+            <button
+              type="button"
+              onClick={() => setMobileShopOpen((v) => !v)}
+              className="w-full flex items-center justify-between py-2 text-left text-gray-700 font-medium"
             >
-              Fabric
-            </Link>
-            <Link
-              to="/collections/all?category=Notions"
-              onClick={toggleNavDrawer}
-              className="block text-gray-600 hover:text-black"
-            >
-              Notions
-            </Link>
-            <Link
-              to="/collections/all?category=Patterns"
-              onClick={toggleNavDrawer}
-              className="block text-gray-600 hover:text-black"
-            >
-              Patterns
-            </Link>
-            <Link
-              to="/collections/all?category=Books"
-              onClick={toggleNavDrawer}
-              className="block text-gray-600 hover:text-black"
-            >
-              Books
-            </Link>
-            <Link
-              to="/collections/all?category=Kits"
-              onClick={toggleNavDrawer}
-              className="block text-gray-600 hover:text-black"
-            >
-              Kits
-            </Link>
+              <span>Shop</span>
+              <span className={`transition-transform ${mobileShopOpen ? "rotate-180" : ""}`}>
+                ▾
+              </span>
+            </button>
+
+            {mobileShopOpen && (
+              <div className="pl-3 pb-2 space-y-2">
+                {shopLinks.map((l) => (
+                  <Link
+                    key={l.label}
+                    to={l.to}
+                    onClick={closeMobileMenu}
+                    className="block text-gray-600 hover:text-black"
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Main links */}
+            <div className="pt-2 space-y-3">
+              {mainLinks.map((l) => (
+                <Link
+                  key={l.label}
+                  to={l.to}
+                  onClick={closeMobileMenu}
+                  className="block text-gray-600 hover:text-black"
+                >
+                  {l.label}
+                </Link>
+              ))}
+
+              {/* My Quilts only if logged in */}
+              {user && (
+                <Link
+                  to="/my-quilts"
+                  onClick={closeMobileMenu}
+                  className="block text-gray-600 hover:text-black"
+                >
+                  My Quilts
+                </Link>
+              )}
+            </div>
           </nav>
         </div>
       </div>

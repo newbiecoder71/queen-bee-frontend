@@ -13,6 +13,59 @@ import {
 } from "../../redux/slices/cartSlice";
 import { Link } from "react-router-dom";
 
+const US_STATES = [
+  { code: "AL", name: "Alabama" },
+  { code: "AK", name: "Alaska" },
+  { code: "AZ", name: "Arizona" },
+  { code: "AR", name: "Arkansas" },
+  { code: "CA", name: "California" },
+  { code: "CO", name: "Colorado" },
+  { code: "CT", name: "Connecticut" },
+  { code: "DE", name: "Delaware" },
+  { code: "FL", name: "Florida" },
+  { code: "GA", name: "Georgia" },
+  { code: "HI", name: "Hawaii" },
+  { code: "ID", name: "Idaho" },
+  { code: "IL", name: "Illinois" },
+  { code: "IN", name: "Indiana" },
+  { code: "IA", name: "Iowa" },
+  { code: "KS", name: "Kansas" },
+  { code: "KY", name: "Kentucky" },
+  { code: "LA", name: "Louisiana" },
+  { code: "ME", name: "Maine" },
+  { code: "MD", name: "Maryland" },
+  { code: "MA", name: "Massachusetts" },
+  { code: "MI", name: "Michigan" },
+  { code: "MN", name: "Minnesota" },
+  { code: "MS", name: "Mississippi" },
+  { code: "MO", name: "Missouri" },
+  { code: "MT", name: "Montana" },
+  { code: "NE", name: "Nebraska" },
+  { code: "NV", name: "Nevada" },
+  { code: "NH", name: "New Hampshire" },
+  { code: "NJ", name: "New Jersey" },
+  { code: "NM", name: "New Mexico" },
+  { code: "NY", name: "New York" },
+  { code: "NC", name: "North Carolina" },
+  { code: "ND", name: "North Dakota" },
+  { code: "OH", name: "Ohio" },
+  { code: "OK", name: "Oklahoma" },
+  { code: "OR", name: "Oregon" },
+  { code: "PA", name: "Pennsylvania" },
+  { code: "RI", name: "Rhode Island" },
+  { code: "SC", name: "South Carolina" },
+  { code: "SD", name: "South Dakota" },
+  { code: "TN", name: "Tennessee" },
+  { code: "TX", name: "Texas" },
+  { code: "UT", name: "Utah" },
+  { code: "VT", name: "Vermont" },
+  { code: "VA", name: "Virginia" },
+  { code: "WA", name: "Washington" },
+  { code: "WV", name: "West Virginia" },
+  { code: "WI", name: "Wisconsin" },
+  { code: "WY", name: "Wyoming" },
+];
+
 const Checkout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -28,6 +81,7 @@ const Checkout = () => {
     address: "",
     city: "",
     zipCode: "",
+    state: "",
     country: "",
     phoneNumber: "",
   });
@@ -170,9 +224,9 @@ const Checkout = () => {
    * RENDER CHECKOUT PAGE
    * --------------------------------------------------------- */
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto py-10 px-6 tracking-tighter">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto py-10 px-6 tracking-tighter items-start">
       {/* ---------------- LEFT: CONTACT + SHIPPING ---------------- */}
-      <div className="bg-white rounded-lg p-6">
+      <div className="bg-white rounded-lg pl-20">
         <h2 className="text-2xl uppercase mb-6">Checkout</h2>
 
         {/* FORM */}
@@ -194,7 +248,7 @@ const Checkout = () => {
           <h3 className="text-lg mb-4">Delivery</h3>
 
           {/* First + Last Name */}
-          <div className="mb-4 grid grid-cols-2 gap-4">
+          <div className="mb-2 grid grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-700">First Name</label>
               <input
@@ -226,7 +280,7 @@ const Checkout = () => {
           </div>
 
           {/* Address */}
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="block text-gray-700">Address</label>
             <input
               required
@@ -242,7 +296,7 @@ const Checkout = () => {
           </div>
 
           {/* City + Zip */}
-          <div className="mb-4 grid grid-cols-2 gap-4">
+          <div className="mb-2 grid grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-700">City</label>
               <input
@@ -273,8 +327,34 @@ const Checkout = () => {
             </div>
           </div>
 
-          {/* Country */}
+          {/* State */}
           <div className="mb-4">
+            <label className="block text-gray-700">State</label>
+            <select
+              required
+              value={shippingAddress.state}
+              onChange={(e) => {
+                const selectedState = e.target.value;
+
+                setShippingAddress({
+                  ...shippingAddress,
+                  state: selectedState,
+                  country: selectedState ? "USA" : shippingAddress.country,
+                });
+              }}
+              className="w-full p-2 pr-12 border rounded"
+            >
+              <option value="">Select State</option>
+              {US_STATES.map((state) => (
+                <option key={state.code} value={state.code}> 
+                  {state.name}  {/* ------state.name if you want the name to show or state.code to show the 2 letter state abbrev. ----- */}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Country */}
+          <div className="mb-2">
             <label className="block text-gray-700">Country</label>
             <input
               required
@@ -290,7 +370,7 @@ const Checkout = () => {
           </div>
 
           {/* Phone */}
-          <div className="mb-4">
+          <div className="mb-2">
             <label className="block text-gray-700">Phone Number</label>
             <input
               required
@@ -310,7 +390,7 @@ const Checkout = () => {
             {!checkoutId ? (
               <button
                 type="submit"
-                className="w-full bg-black text-white py-3 rounded hover:bg-gray-800 transition-colors"
+                className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors"
               >
                 Continue to Payment
               </button>
@@ -331,7 +411,7 @@ const Checkout = () => {
       </div>
 
       {/* ---------------- RIGHT: ORDER SUMMARY ---------------- */}
-      <div className="bg-gray-50 p-6 rounded-lg">
+      <div className="bg-gray-50 mt-14 pl-2 pr-20 rounded-lg">
         <h3 className="text-lg mb-4">Order Summary</h3>
 
         <div className="border-t py-4 mb-4">
@@ -390,7 +470,7 @@ const Checkout = () => {
                 </div>
               </div>
 
-              <p className="text-xl">
+              <p className="text-md">
                 ${Number(product.price).toFixed(2)}
               </p>
             </div>
@@ -398,15 +478,15 @@ const Checkout = () => {
         </div>
 
         {/* Totals */}
-        <div className="flex justify-between items-center text-lg mb-2">
+        <div className="flex justify-between items-center text-base mb-2">
           <p>Subtotal</p>
           <p>${subtotal.toFixed(2)}</p>
         </div>
-        <div className="flex justify-between items-center text-lg mb-2">
+        <div className="flex justify-between items-center text-base mb-2">
           <p>Tax (8.1%)</p>
           <p>${tax.toFixed(2)}</p>
         </div>
-        <div className="flex justify-between items-center text-lg">
+        <div className="flex justify-between items-center text-base">
           <p>Shipping</p>
           <p>Free</p>
         </div>
@@ -416,7 +496,7 @@ const Checkout = () => {
           <p>${grandTotal.toFixed(2)}</p>
         </div>
 
-        <div className="text-center mt-6">
+        <div className="text-center pb-2 mt-6">
           <Link
             to="/collections/all"
             className="text-blue-500 font-semibold hover:underline"

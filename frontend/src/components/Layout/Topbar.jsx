@@ -22,7 +22,7 @@ const Topbar = () => {
             </div>
             <div className="text-sm hidden md:block">
                 <a href="tel:+1234567890" className="hover:text-gray-300">
-                    +1 (123) 456-7890
+                    +1 (417) 893-9068
                 </a>
             </div>
         </div>

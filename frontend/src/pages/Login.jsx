@@ -12,10 +12,13 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  
   const { user, error, loading } = useSelector((state) => state.auth);
 
   const redirect = new URLSearchParams(location.search).get("redirect") || "/";
   const isCheckoutRedirect = redirect.includes("checkout");
+
+  const target = isCheckoutRedirect ? "/checkout" : redirect;
 
   useEffect(() => {
     if (!user) return;
@@ -28,7 +31,7 @@ const Login = () => {
   
     // 2️⃣ No guest cart? Done.
     if (!storedGuestId) {
-      navigate(isCheckoutRedirect ? "/checkout" : "/");
+      navigate(target);
       return;
     }
   
@@ -42,7 +45,7 @@ const Login = () => {
   
         // 4️⃣ If empty - just load user cart and move on
         if (!guestCart?.products?.length) {
-          navigate(isCheckoutRedirect ? "/checkout" : "/");
+          navigate(target);
           return;
         }
   
@@ -56,12 +59,12 @@ const Login = () => {
             // 7️⃣ Reload user cart from Mongo
             dispatch(fetchCart({ userId }));
   
-            navigate(isCheckoutRedirect ? "/checkout" : "/");
+            navigate(target);
           });
       })
       .catch(() => {
         // Guest cart load failed → fallback to user cart
-        navigate(isCheckoutRedirect ? "/checkout" : "/");
+        navigate(target);
       });
   }, [user]);      
 

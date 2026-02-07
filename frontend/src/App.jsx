@@ -23,6 +23,13 @@ import QuiltingOrderManagement from "./components/Admin/QuiltingOrderManagement"
 import MyQuiltsPage from "./pages/MyQuiltsPage";
 import MyQuiltsDetailsPage from "./pages/MyQuiltsDetailsPage";
 import QuiltingForm from "./components/Quilting/QuiltingForm";
+import ContactPage from "./pages/ContactPage";
+import ScrollToTop from "./components/Common/ScrollToTop";
+import ClassesPage from "./pages/ClassesPage";
+import ServicesPage from "./pages/ServicesPage";
+import AboutPage from "./pages/AboutPage";
+import AdminMessagesPage from "./components/Admin/AdminMessagesPage";
+import AdminSubscriberListPage from "./components/Admin/AdminSubscriberListPage";
 
 import { Provider } from "react-redux";
 import store from "./redux/store";
@@ -32,6 +39,7 @@ const App = () => {
     <Provider store={store}>
       <BrowserRouter>
         <Toaster position="top-right" />
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<UserLayout />}>
             <Route index element={<Home />} />
@@ -39,14 +47,18 @@ const App = () => {
             <Route path="register" element={<Register />} />
             <Route path="profile" element={<Profile />} />
             <Route path="collections/:collection" element={<CollectionPage />} />
-            <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="product/:id" element={<ProductDetails />} />
             <Route path="checkout" element={<Checkout />} />
             <Route path="order-confirmation" element={<OrderConfirmationPage />} />
             <Route path="orders/:id" element={<OrderDetailsPage />} />
             <Route path="my-orders" element={<MyOrdersPage />} />
             <Route path="my-quilts" element={<MyQuiltsPage />} />
-            <Route path="/my-quilts/:id" element={<MyQuiltsDetailsPage />} />
+            <Route path="my-quilts/:id" element={<MyQuiltsDetailsPage />} />
             <Route path="quilting-form" element={<QuiltingForm />} />
+            <Route path="classes" element={<ClassesPage />} />
+            <Route path="contact" element={<ContactPage />} />
+            <Route path="services" element={<ServicesPage />} />
+            <Route path="about" element={<AboutPage />} />
           </Route>
           <Route path="/admin" element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
             <Route index element={<AdminHomePage />} />
@@ -58,6 +70,8 @@ const App = () => {
             <Route path="orders/:id" element={<OrderDetailsPage />} />
             <Route path="quilting-orders" element={<QuiltingOrderManagement />} />
             <Route path="quilting-form" element={<QuiltingForm />} />
+            <Route path="messages" element={<AdminMessagesPage />} />
+            <Route path="subscribers" element={<AdminSubscriberListPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

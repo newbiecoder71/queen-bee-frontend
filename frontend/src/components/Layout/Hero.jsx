@@ -38,7 +38,7 @@ const Hero = () => {
             bg-yellow-200
             text-sm md:text-lg
             px-1 py-1
-            rounded-sm
+            rounded-2xl
             tracking-tighter
             mb-6
           ">
@@ -50,12 +50,12 @@ const Hero = () => {
             <Link
               to="./collections/all"
               className="
-                bg-white
+                bg-violet-300
                 text-gray-950
                 px-6 py-2
                 rounded-md
                 text-lg
-                hover:bg-gray-100
+                hover:bg-violet-100
                 transition
                 duration-300
               "

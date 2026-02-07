@@ -8,3 +8,37 @@
   font-optical-sizing: auto;
   font-style: normal;
 }
+
+/* =========================================
+   FullCalendar button focus fix
+   Prevents month arrows from staying highlighted
+========================================= */
+
+.fc .fc-button:focus,
+.fc .fc-button:active,
+.fc .fc-button.fc-button-active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Keep button color consistent when clicked */
+.fc .fc-button-primary:focus,
+.fc .fc-button-primary:active {
+  background-color: #1f2937 !important; /* Tailwind gray-800 */
+  border-color: #1f2937 !important;
+}
+
+/* Violet tooltip theme for Queen Bee Quilts */
+.tippy-box[data-theme~='violet'] {
+  background-color: #8b5cf6; /* violet-500 */
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+/* Arrow color */
+.tippy-box[data-theme~='violet'] > .tippy-arrow::before {
+  color: #7c3aed;
+}
+

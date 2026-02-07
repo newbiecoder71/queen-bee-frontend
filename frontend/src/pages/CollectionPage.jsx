@@ -74,7 +74,12 @@ const CollectionPage = () => {
         </Link>
 
         {/* Sort Options */}
-        <SortOptions />
+        <div className="flex justify-end mb-4 mr-3">
+          <div className="flex items-center gap-4">
+            <span className="text-md text-gray-700 mb-4">Sorted by</span>
+            <SortOptions />
+          </div>
+        </div>
 
         {/* Product Grid */}
         <ProductGrid products={products} loading={loading} error={error} />

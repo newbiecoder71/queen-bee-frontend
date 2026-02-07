@@ -9,7 +9,9 @@ import adminProductReducer from './slices/adminProductSlice';
 import adminOrdersReducer from './slices/adminOrderSlice';
 import adminQuiltingOrderReducer from "./slices/adminQuiltingOrderSlice";
 import quiltingOrderReducer from "./slices/quiltingOrderSlice";
-
+import classesReducer from "./slices/classesSlice";
+import messagesReducer from "./slices/messagesSlice";
+import newsletterReducer from "./slices/newsletterSlice";
 
 const store = configureStore({
   reducer: {
@@ -23,6 +25,9 @@ const store = configureStore({
     adminOrders: adminOrdersReducer,
     adminQuiltingOrders: adminQuiltingOrderReducer,
     quiltingOrders: quiltingOrderReducer,
+    classes: classesReducer,
+    messages: messagesReducer,
+    newsletter: newsletterReducer,
   },
 });
 

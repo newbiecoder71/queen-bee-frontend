@@ -11,14 +11,20 @@ const QuiltingForm = ({ onSuccess, onCancel }) => {
   const [threadColor, setThreadColor] = useState("");
   const [backing, setBacking] = useState("");
   const [batting, setBatting] = useState("");
-  const [backingPrep, setBackingPrep] = useState("");
+  const [backingPrep, setBackingPrep] = useState(false);
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [error, setError] = useState(null);
 
   const squareInches =
-    widthInches && heightInches ? widthInches * heightInches : 0;
-  const price = (squareInches * 0.0125).toFixed(2);
+  widthInches && heightInches ? widthInches * heightInches : 0;
+
+  const basePriceNum = squareInches * 0.0125;
+  const BACK_PREP_FEE = 10;
+
+  const totalPriceNum = basePriceNum + (backingPrep ? BACK_PREP_FEE : 0);
+  const price = totalPriceNum.toFixed(2);
+
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -161,12 +167,12 @@ const QuiltingForm = ({ onSuccess, onCancel }) => {
         <div>
           <label className="block font-medium">Backing Prep</label>
           <select
-            value={backingPrep}
+            value={backingPrep ? "true" : "false"}
             onChange={(e) => setBackingPrep(e.target.value === "true")}
             className="w-full border px-2 py-1 rounded"
           >
             <option value="false">No</option>
-            <option value="true">Yes</option>
+            <option value="true">Yes (+$10)</option>
           </select>
         </div>
 
