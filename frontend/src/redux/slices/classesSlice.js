@@ -44,6 +44,23 @@ export const rsvpToClass = createAsyncThunk(
   }
 );
 
+export const cancelRsvpToClass = createAsyncThunk(
+  "classes/cancelRsvpToClass",
+  async (classId, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("userToken");
+      const res = await axios.post(
+        `${API}/api/classes/${classId}/cancel-rsvp`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
+  }
+);
+
 const classesSlice = createSlice({
   name: "classes",
   initialState: {
@@ -80,7 +97,6 @@ const classesSlice = createSlice({
       .addCase(rsvpToClass.fulfilled, (state, action) => {
         state.rsvpLoading = false;
 
-        // Update the class in-place if we got one back
         const updated = action.payload;
         if (updated && updated._id) {
           const idx = state.classes.findIndex((c) => c._id === updated._id);
@@ -88,6 +104,25 @@ const classesSlice = createSlice({
         }
       })
       .addCase(rsvpToClass.rejected, (state, action) => {
+        state.rsvpLoading = false;
+        state.rsvpError = action.payload || action.error.message;
+      })
+
+      // cancelRsvpToClass
+      .addCase(cancelRsvpToClass.pending, (state) => {
+        state.rsvpLoading = true;      // reuse same spinner
+        state.rsvpError = null;
+      })
+      .addCase(cancelRsvpToClass.fulfilled, (state, action) => {
+        state.rsvpLoading = false;
+
+        const updated = action.payload;
+        if (updated && updated._id) {
+          const idx = state.classes.findIndex((c) => c._id === updated._id);
+          if (idx !== -1) state.classes[idx] = updated;
+        }
+      })
+      .addCase(cancelRsvpToClass.rejected, (state, action) => {
         state.rsvpLoading = false;
         state.rsvpError = action.payload || action.error.message;
       });

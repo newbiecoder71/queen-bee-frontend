@@ -56,10 +56,18 @@ export const loginUser = createAsyncThunk(
       // Return consistent object
       return { user: normalizedUser, token };
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: "Login failed" }
-      );
-    }
+      const data = error.response?.data;
+    
+      const message =
+        data?.message ||
+        (typeof data === "string" ? data : null) ||
+        error.message ||
+        "Login failed";
+    
+      const field = data?.field || null;
+    
+      return rejectWithValue({ message, field });
+    }    
   }
 );
 
@@ -81,10 +89,18 @@ export const registerUser = createAsyncThunk(
       // MUST match loginUser's return shape
       return { user: normalizedUser, token };
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: "Registration failed" }
-      );
-    }
+      const data = error.response?.data;
+    
+      const message =
+        data?.message ||
+        (typeof data === "string" ? data : null) ||
+        error.message ||
+        "Registration failed";
+    
+      const field = data?.field || null;
+    
+      return rejectWithValue({ message, field });
+    }    
   }
 );
 
@@ -153,8 +169,7 @@ const authSlice = createSlice({
 
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error =
-          action.payload?.message || "Login failed";
+        state.error = action.payload || { message: "Login failed" };
       });
 
     /* REGISTER */
@@ -185,9 +200,7 @@ const authSlice = createSlice({
 
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
-        state.error =
-          action.payload?.message ||
-          "Registration failed";
+        state.error = action.payload || { message: "Registration failed" };
       });
   },
 });

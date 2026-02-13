@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 import { logout } from "../redux/slices/authSlice";
 import { clearCart } from "../redux/slices/cartSlice";
 import axios from "axios";
+import MyClassesCalendarModal from "../components/Classes/MyClassesCalendarModal";
+import { FaCalendarAlt } from "react-icons/fa";
+import { FaGoogle, FaApple } from "react-icons/fa";
 
 const API = import.meta.env.VITE_BACKEND_URL;
 
@@ -19,6 +22,8 @@ const Profile = () => {
   const [myClasses, setMyClasses] = useState([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [classesError, setClassesError] = useState(null);
+  const [myClassesCalendarOpen, setMyClassesCalendarOpen] = useState(false);
+  const [cancelingId, setCancelingId] = useState(null);
 
   useEffect(() => {
     if (!user && !isLoggingOut) {
@@ -72,6 +77,135 @@ const Profile = () => {
     });
   };
 
+  const handleCancelRsvp = async (classId) => {
+    try {
+      setCancelingId(classId);
+  
+      const authToken = token || localStorage.getItem("userToken");
+  
+      await axios.post(
+        `${API}/api/classes/${classId}/cancel-rsvp`,
+        {},
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      );
+  
+      // ✅ Remove from "My Classes" list instantly
+      setMyClasses((prev) => prev.filter((c) => c._id !== classId));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Error canceling RSVP");
+    } finally {
+      setCancelingId(null);
+    }
+  };
+  
+  const pad2 = (n) => String(n).padStart(2, "0");
+
+  // Google Calendar wants UTC timestamps like: 20260208T190000Z
+  const toGoogleUtc = (date) => {
+    const d = new Date(date);
+    return (
+      d.getUTCFullYear() +
+      pad2(d.getUTCMonth() + 1) +
+      pad2(d.getUTCDate()) +
+      "T" +
+      pad2(d.getUTCHours()) +
+      pad2(d.getUTCMinutes()) +
+      "00Z"
+    );
+  };
+
+  const buildGoogleCalendarUrl = (cls) => {
+    const text = cls.title || "Queen Bee Quilts Class";
+    const detailsParts = [];
+
+    if (cls.instructor) detailsParts.push(`Instructor: ${cls.instructor}`);
+    if (cls.description) detailsParts.push(cls.description);
+    if (typeof cls.totalPrice !== "undefined")
+      detailsParts.push(`Total: $${Number(cls.totalPrice ?? 0).toFixed(2)}`);
+
+    const details = detailsParts.join("\n\n");
+
+    const start = cls.start ? toGoogleUtc(cls.start) : "";
+    const end = cls.end ? toGoogleUtc(cls.end) : start;
+
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text,
+      dates: `${start}/${end}`,
+      details,
+      // location: cls.location || "", // if you add a location field later
+    });
+
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  };
+
+  // ICS for Apple/Outlook/etc.
+  const escapeIcs = (s = "") =>
+    String(s)
+      .replace(/\\/g, "\\\\")
+      .replace(/\n/g, "\\n")
+      .replace(/,/g, "\\,")
+      .replace(/;/g, "\\;");
+
+  const toIcsUtc = (date) => {
+    const d = new Date(date);
+    return (
+      d.getUTCFullYear() +
+      pad2(d.getUTCMonth() + 1) +
+      pad2(d.getUTCDate()) +
+      "T" +
+      pad2(d.getUTCHours()) +
+      pad2(d.getUTCMinutes()) +
+      pad2(d.getUTCSeconds()) +
+      "Z"
+    );
+  };
+
+  const downloadIcs = (cls) => {
+    const uid = `${cls._id || Date.now()}@queenbeequilts`;
+    const dtstamp = toIcsUtc(new Date());
+    const dtstart = toIcsUtc(cls.start);
+    const dtend = cls.end ? toIcsUtc(cls.end) : dtstart;
+
+    const summary = escapeIcs(cls.title || "Queen Bee Quilts Class");
+    const descriptionParts = [];
+    if (cls.instructor) descriptionParts.push(`Instructor: ${cls.instructor}`);
+    if (cls.description) descriptionParts.push(cls.description);
+    if (typeof cls.totalPrice !== "undefined")
+      descriptionParts.push(`Total: $${Number(cls.totalPrice ?? 0).toFixed(2)}`);
+
+    const description = escapeIcs(descriptionParts.join("\n\n"));
+
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Queen Bee Quilts//Classes//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:${uid}`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART:${dtstart}`,
+      `DTEND:${dtend}`,
+      `SUMMARY:${summary}`,
+      `DESCRIPTION:${description}`,
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(cls.title || "class").replace(/[^\w-]+/g, "_")}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-grow container mx-auto p-4 md:p-6">
@@ -100,13 +234,17 @@ const Profile = () => {
             <div className="rounded-lg bg-white shadow-sm border p-4">
               <div className="flex items-center justify-between ml-3 mb-3">
                 <h2 className="text-2xl font-bold ml-4">My Classes</h2>
-                <button
-                  onClick={() => navigate("/classes")}
-                  className="text-sm font-semibold text-blue-700 hover:underline"
-                  type="button"
-                >
-                  Browse Classes
-                </button>
+
+                <div className="flex items-center gap-3 mr-4">
+                  <button
+                    onClick={() => setMyClassesCalendarOpen(true)}
+                    className="inline-flex items-center gap-2 rounded bg-yellow-400 px-4 py-2 font-semibold hover:bg-yellow-500"
+                    type="button"
+                  >
+                    <FaCalendarAlt />
+                    Calendar View
+                  </button>
+                </div>
               </div>
 
               {classesLoading && <div className="text-sm text-gray-600">Loading your classes…</div>}
@@ -147,12 +285,59 @@ const Profile = () => {
                           {c.description}
                         </div>
                       )}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {/* Google Calendar */}
+                        <a
+                          href={buildGoogleCalendarUrl(c)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-semibold
+                                    bg-white border border-gray-300 text-gray-800
+                                    hover:bg-gray-100 hover:border-gray-400 transition"
+                        >
+                          <FaGoogle className="text-[#4285F4]" />
+                          Google Calendar
+                        </a>
+
+                        {/* Apple / iCal */}
+                        <button
+                          onClick={() => downloadIcs(c)}
+                          className="inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-semibold
+                                    bg-black text-white
+                                    hover:bg-gray-900 transition"
+                          type="button"
+                        >
+                          <FaApple className="text-white" />
+                          Apple Calendar
+                        </button>
+                      </div>
+
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => handleCancelRsvp(c._id)}
+                          disabled={cancelingId === c._id}
+                          className={`rounded px-3 py-1 text-sm font-semibold border ${
+                            cancelingId === c._id
+                              ? "bg-gray-200 text-gray-600 cursor-not-allowed"
+                              : "bg-white hover:bg-red-50 text-red-600 border-red-300"
+                          }`}
+                          type="button"
+                        >
+                          {cancelingId === c._id ? "Canceling..." : "Cancel RSVP"}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-
+            {myClassesCalendarOpen && (
+              <MyClassesCalendarModal
+                open={myClassesCalendarOpen}
+                onClose={() => setMyClassesCalendarOpen(false)}
+                myClasses={myClasses}
+              />
+            )}
           </div>
         </div>
       </div>

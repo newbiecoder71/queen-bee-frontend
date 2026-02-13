@@ -1,14 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   HiOutlineUser,
+  HiUser,
   HiOutlineShoppingBag,
   HiBars3BottomRight,
+  HiMagnifyingGlass,
 } from "react-icons/hi2";
 import { IoMdClose } from "react-icons/io";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useSelector } from "react-redux";
-
-import SearchBar from "./SearchBar";
 import CartDrawer from "../Layout/CartDrawer";
 
 const Navbar = () => {
@@ -20,20 +20,64 @@ const Navbar = () => {
 
   // mobile collapsible section
   const [mobileShopOpen, setMobileShopOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileSearchMounted, setMobileSearchMounted] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // ✅ inline navbar search
+  const [navSearch, setNavSearch] = useState("");
+  const navSearchRef = useRef(null);
+
+  const runNavSearch = () => {
+    const term = navSearch.trim();
+    if (!term) return;
+
+    // Send to your collections page using your existing query param
+    navigate(`/collections/all?search=${encodeURIComponent(term)}`);
+    setMobileSearchOpen(false);
+
+    // Optional: clear after searching
+    // setNavSearch("");
+  };
+
+  const clearNavSearch = () => {
+    setNavSearch("");
+    const params = new URLSearchParams(location.search);
+    if (params.get("search")) {
+      navigate("/collections/all");
+    }
+  };
 
   const { cart } = useSelector((state) => state.cart);
   const { user } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (mobileSearchOpen) {
+      setMobileSearchMounted(true);
+    } else {
+      // wait for the closing animation to finish before unmounting
+      const t = setTimeout(() => setMobileSearchMounted(false), 220);
+      return () => clearTimeout(t);
+    }
+  }, [mobileSearchOpen]);
 
   const cartItemCount = useMemo(() => {
     if (!Array.isArray(cart?.products)) return 0;
     return cart.products.reduce((sum, item) => sum + (item.quantity || 0), 0);
   }, [cart]);
 
-  const toggleNavDrawer = () => setNavDrawerOpen((v) => !v);
+  const toggleNavDrawer = () => {
+    setNavDrawerOpen((v) => !v);
+    setMobileSearchOpen(false);
+  };
+  
   const toggleCartDrawer = () => setDrawerOpen((v) => !v);
 
   // Shop links (single source of truth)
   const shopLinks = [
+    { label: "All", to: "/collections/all" },
     { label: "Fabric", to: "/collections/all?category=Fabric" },
     { label: "Notions", to: "/collections/all?category=Notions" },
     { label: "Patterns", to: "/collections/all?category=Patterns" },
@@ -139,6 +183,55 @@ const Navbar = () => {
             </Link>
           )}
 
+            {/* ✅ Inline Search (Desktop) */}
+            <div className="hidden sm:flex items-center">
+              <div className="relative flex-shrink w-40 sm:w-48 md:w-56 lg:w-64">
+                <input
+                  ref={navSearchRef}
+                  className="w-full rounded border px-3 py-2 pr-9 text-sm"
+                  placeholder="Search products…"
+                  value={navSearch}
+                  onChange={(e) => setNavSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && runNavSearch()}
+                />
+
+                {navSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearNavSearch();
+                      navSearchRef.current?.focus();
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={runNavSearch}
+                className="ml-2 rounded bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-900"
+              >
+                Search
+              </button>
+            </div>
+            {/* ✅ Mobile Search Icon (phones) */}
+            <button
+              type="button"
+              onClick={() => {
+                setMobileSearchOpen((v) => !v);
+                // optional: close menu if open
+                // setNavDrawerOpen(false);
+              }}
+              className="sm:hidden hover:text-black"
+              aria-label="Search"
+            >
+              <HiMagnifyingGlass className="h-7 w-7 text-gray-700" />
+            </button>
+
           {/* Profile Icon + Tooltip */}
           <div className="relative group">
             <Link
@@ -146,7 +239,11 @@ const Navbar = () => {
               className="hover:text-black inline-flex"
               aria-label={user ? `Hello, ${user.name}` : "Login"}
             >
-              <HiOutlineUser className="h-7 w-7 text-gray-700 translate-y-1" />
+              {user ? (
+                <HiUser className="h-7 w-7 text-blue-600 translate-y-1" />
+              ) : (
+                <HiOutlineUser className="h-7 w-7 text-gray-700 translate-y-1" />
+              )}
             </Link>
 
             <div
@@ -170,17 +267,63 @@ const Navbar = () => {
             )}
           </button>
 
-          {/* Search */}
-          <div className="overflow-hidden">
-            <SearchBar />
-          </div>
-
           {/* Mobile Menu */}
           <button onClick={toggleNavDrawer} className="md:hidden">
             <HiBars3BottomRight className="h-6 w-6 text-gray-700" />
           </button>
         </div>
       </nav>
+
+      {/* ✅ Mobile Search Panel (animated) */}
+      {mobileSearchMounted && (
+        <div
+          className={`sm:hidden overflow-hidden border-t bg-white px-4 transition-all duration-200 ease-out
+            ${mobileSearchOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}
+        >
+          <div
+            className={`pb-4 transition-all duration-200 ease-out
+              ${mobileSearchOpen ? "translate-y-0" : "-translate-y-2"}`}
+          >
+            <div className="relative mt-3">
+              <input
+                className="w-full rounded border px-3 py-2 pr-9 text-sm"
+                placeholder="Search products…"
+                value={navSearch}
+                onChange={(e) => setNavSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    runNavSearch();
+                    setMobileSearchOpen(false);
+                  }
+                }}
+                autoFocus
+              />
+
+              {navSearch && (
+                <button
+                  type="button"
+                  onClick={clearNavSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                runNavSearch();
+                setMobileSearchOpen(false);
+              }}
+              className="mt-3 w-full rounded bg-blue-700 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Cart Drawer */}
       <CartDrawer drawerOpen={drawerOpen} toggleCartDrawer={toggleCartDrawer} />

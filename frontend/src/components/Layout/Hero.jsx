@@ -50,12 +50,12 @@ const Hero = () => {
             <Link
               to="./collections/all"
               className="
-                bg-violet-300
-                text-gray-950
+                bg-purple-800
+                text-white
                 px-6 py-2
-                rounded-md
+                rounded-2xl
                 text-lg
-                hover:bg-violet-100
+                hover:bg-purple-600
                 transition
                 duration-300
               "
