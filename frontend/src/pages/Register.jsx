@@ -4,6 +4,7 @@ import register from "/images/IMG_5094.jpg";
 import { registerUser, clearError } from "../redux/slices/authSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { mergeCart } from "../redux/slices/cartSlice";
+import ClearableInput from "../components/Forms/ClearableInput";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -54,73 +55,66 @@ const Register = () => {
 
           {/* Name */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold mb-2">Name</label>
-            <input
+            <ClearableInput
+              label="Name"
               type="text"
               value={name}
+              placeholder="Enter your name"
               onChange={(e) => {
                 setName(e.target.value);
                 if (error) dispatch(clearError());
               }}
-              className="w-full p-2 border rounded"
-              placeholder="Enter your name"
+              onClear={() => setName("")}
+              error={error?.field === "name" ? error.message : null}
             />
           </div>
 
           {/* Email */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold mb-2">Email</label>
-            <input
+            <ClearableInput
+              label="Email"
               type="email"
               value={email}
+              placeholder="Enter your email address"
               onChange={(e) => {
                 setEmail(e.target.value);
                 if (error) dispatch(clearError());
               }}
-              className="w-full p-2 border rounded"
-              placeholder="Enter your email address"
+              onClear={() => setEmail("")}
+              error={error?.field === "email" ? error.message : null}
             />
-            {error?.field === "email" && (
-              <p className="text-red-600 text-sm mt-1">{error.message}</p>
-            )}
           </div>
 
           {/* Password */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold mb-2">Password</label>
-            <input
+            <ClearableInput
+              label="Password"
               type="password"
               value={password}
+              placeholder="Enter your password"
               onChange={(e) => {
                 setPassword(e.target.value);
                 if (error) dispatch(clearError());
               }}
-              className="w-full p-2 border rounded"
-              placeholder="Enter your password"
+              onClear={() => setPassword("")}
+              error={error?.field === "password" ? error.message : null}
             />
-            {error?.field === "password" && (
-              <p className="text-red-600 text-sm mt-1">{error.message}</p>
-            )}
           </div>
 
           {/* Confirm Password */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold mb-2">
-              Confirm Password
-            </label>
-            <input
+            <ClearableInput
+              label="Confirm Password"
               type="password"
               value={confirmPassword}
+              placeholder="Confirm your password"
               onChange={(e) => {
                 setConfirmPassword(e.target.value);
                 if (error) dispatch(clearError());
               }}
-              className="w-full p-2 border rounded"
-              placeholder="Confirm your password"
+              onClear={() => setConfirmPassword("")}
+              error={error?.field === "confirmPassword" ? error.message : null}
             />
-            {error?.field === "confirmPassword" && (
-              <p className="text-red-600 text-sm mt-1">{error.message}</p>
-            )}
           </div>
 
           {/* Submit Button */}

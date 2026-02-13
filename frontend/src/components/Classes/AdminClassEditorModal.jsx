@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 
 const API = import.meta.env.VITE_BACKEND_URL;
@@ -28,7 +28,17 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
   const [rsvpMeta, setRsvpMeta] = useState({ seatsTaken: 0, capacity: 0 });
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [rsvpError, setRsvpError] = useState(null);
+  const [removingUserId, setRemovingUserId] = useState(null);
 
+  // ✅ Admin add RSVP UI
+  const [showAddRsvp, setShowAddRsvp] = useState(false);
+  const [userQ, setUserQ] = useState("");
+  const [userResults, setUserResults] = useState([]);
+  const [userSearching, setUserSearching] = useState(false);
+  const [addingUserId, setAddingUserId] = useState(null);
+
+  const userInputRef = useRef(null);
+  
   useEffect(() => {
     if (!open) return;
 
@@ -42,6 +52,12 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
     setRsvpMeta({ seatsTaken: 0, capacity: 0 });
     setRsvpLoading(false);
     setRsvpError(null);
+    setRemovingUserId(null);
+    setShowAddRsvp(false);
+    setUserQ("");
+    setUserResults([]);
+    setUserSearching(false);
+    setAddingUserId(null);
   }, [open, initialValue]);
 
   // ✅ Load RSVP'd customers when editing an existing class
@@ -77,7 +93,9 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
         if (cancelled) return;
         setRsvpUsers([]);
         setRsvpMeta({ seatsTaken: 0, capacity: 0 });
-        setRsvpError(err.response?.data?.message || err.message || "Error loading RSVPs");
+        setRsvpError(
+          err.response?.data?.message || err.message || "Error loading RSVPs"
+        );
       } finally {
         if (!cancelled) setRsvpLoading(false);
       }
@@ -89,6 +107,119 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
       cancelled = true;
     };
   }, [open, initialValue?._id]);
+
+  // ✅ Admin remove RSVP'd customer
+  const removeRsvpUser = async (userId) => {
+    const classId = initialValue?._id;
+    if (!classId) return;
+
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Missing admin token. Please log in again.");
+      return;
+    }
+
+    const confirmRemove = window.confirm(
+      "Remove this customer from the class RSVP list?"
+    );
+    if (!confirmRemove) return;
+
+    try {
+      setRemovingUserId(userId);
+
+      const { data } = await axios.delete(
+        `${API}/api/classes/${classId}/rsvps/${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // ✅ Update UI immediately
+      setRsvpUsers((prev) => prev.filter((u) => u._id !== userId));
+
+      // ✅ Keep meta in sync (prefer server response, else fallback)
+      const newSeatsTaken =
+        Number(data?.rsvpCount) ||
+        Math.max(0, Number(rsvpMeta.seatsTaken ?? 0) - 1);
+
+      setRsvpMeta((prev) => ({
+        ...prev,
+        seatsTaken: newSeatsTaken,
+      }));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Error removing RSVP");
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
+
+  const searchUsers = async () => {
+    const classId = initialValue?._id;
+    if (!classId) return;
+
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      setRsvpError("Missing admin token. Please log in again.");
+      return;
+    }
+
+    const term = userQ.trim();
+    if (term.length < 2) {
+      setUserResults([]);
+      return;
+    }
+
+    setUserSearching(true);
+    try {
+      const { data } = await axios.get(
+        `${API}/api/users/admin/search?q=${encodeURIComponent(term)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setUserResults(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("User search error:", err);
+      setUserResults([]);
+      alert(err.response?.data?.message || err.message || "Error searching users");
+    } finally {
+      setUserSearching(false);
+    }
+  };
+
+  const addRsvpUser = async (userId) => {
+    const classId = initialValue?._id;
+    if (!classId) return;
+
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Missing admin token. Please log in again.");
+      return;
+    }
+
+    try {
+      setAddingUserId(userId);
+
+      // ✅ ADMIN ADD endpoint you added in classRoutes
+      const { data } = await axios.post(
+        `${API}/api/classes/${classId}/rsvps/${userId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // ✅ Update RSVP list + meta from server response
+      setRsvpUsers(Array.isArray(data?.rsvps) ? data.rsvps : []);
+      setRsvpMeta({
+        seatsTaken: Number(data?.seatsTaken ?? 0),
+        capacity: Number(data?.capacity ?? 0),
+      });
+
+      // Optional: clear search UI after add
+      setUserQ("");
+      setUserResults([]);
+      setShowAddRsvp(false);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Error adding RSVP");
+    } finally {
+      setAddingUserId(null);
+    }
+  };
 
   const itemsTotal = useMemo(() => {
     return (form.requiredItems || []).reduce(
@@ -157,6 +288,7 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
   };
 
   const save = async () => {
+    // Admin-only endpoints must include token
     const token = localStorage.getItem("userToken");
 
     const payload = {
@@ -313,13 +445,31 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
               <div className="font-semibold mb-2">Search Products (supplies)</div>
 
               <div className="flex gap-2">
-                <input
-                  className="flex-1 rounded border p-2"
-                  placeholder="Search by name, theme, brand, category, material…"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && runSearch()}
-                />
+                <div className="relative flex-1">
+                  <input
+                    className="w-full rounded border p-2 pr-9"
+                    placeholder="Search by name, theme, brand, category, material…"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                  />
+
+                  {q && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQ("");
+                        setResults([]);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2
+                                rounded text-gray-500 hover:text-black
+                                focus:outline-none"
+                      aria-label="Clear search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
 
                 <button
                   onClick={runSearch}
@@ -404,19 +554,108 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
               </div>
             </div>
 
-            {/* ✅ RSVP'd customers panel */}
+            {/* ✅ RSVP'd customers panel with Remove buttons */}
             <div className="rounded border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="font-semibold">RSVP&apos;d Customers</div>
+
                 {initialValue?._id ? (
-                  <div className="text-xs text-gray-600">
-                    Seats: <b>{rsvpMeta.seatsTaken}</b>
-                    {rsvpMeta.capacity ? ` / ${rsvpMeta.capacity}` : ""}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddRsvp((v) => !v)}
+                      className="rounded bg-black px-3 py-1 text-xs font-semibold text-white hover:bg-gray-900"
+                    >
+                      {showAddRsvp ? "Close" : "+ Add"}
+                    </button>
+
+                    <div className="text-xs text-gray-600">
+                      Seats: <b>{rsvpMeta.seatsTaken}</b>
+                      {rsvpMeta.capacity ? ` / ${rsvpMeta.capacity}` : ""}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-xs text-gray-600">Save class to enable RSVPs</div>
                 )}
               </div>
+
+              {initialValue?._id && showAddRsvp && (
+                <div className="mt-3 rounded border bg-gray-50 p-3">
+                  <div className="text-sm font-semibold mb-2">
+                    Add customer to RSVP
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        ref={userInputRef}
+                        className="w-full rounded border p-2 pr-9"
+                        placeholder="Search by name or email…"
+                        value={userQ}
+                        onChange={(e) => setUserQ(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && searchUsers()}
+                      />
+
+                      {userQ && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserQ("");
+                            setUserResults([]);
+                            userInputRef.current?.focus();
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2
+                                    text-gray-500 hover:text-black"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={searchUsers}
+                      className="rounded bg-yellow-400 px-4 font-semibold hover:bg-yellow-500"
+                    >
+                      {userSearching ? "..." : "Search"}
+                    </button>
+                  </div>
+
+                  <div className="mt-3 space-y-2 max-h-48 overflow-auto">
+                    {userResults.map((u) => {
+                      const already = rsvpUsers.some((x) => x._id === u._id);
+                      return (
+                        <div
+                          key={u._id}
+                          className="flex items-center justify-between rounded border bg-white p-2"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold truncate">{u.name}</div>
+                            <div className="text-xs text-gray-600 truncate">{u.email}</div>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={already || addingUserId === u._id}
+                            onClick={() => addRsvpUser(u._id)}
+                            className={`rounded px-3 py-1 text-sm font-semibold ${
+                              already
+                                ? "bg-gray-200 text-gray-600"
+                                : "bg-blue-700 text-white hover:bg-blue-800"
+                            }`}
+                          >
+                            {already ? "Already" : addingUserId === u._id ? "Adding..." : "Add"}
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {!userResults.length && (
+                      <div className="text-sm text-gray-600">No results yet.</div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {rsvpLoading && <div className="mt-2 text-sm text-gray-600">Loading…</div>}
               {rsvpError && <div className="mt-2 text-sm text-red-600">{rsvpError}</div>}
@@ -428,9 +667,31 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
               {!rsvpLoading && rsvpUsers.length > 0 && (
                 <div className="mt-3 max-h-64 overflow-auto space-y-2">
                   {rsvpUsers.map((u) => (
-                    <div key={u._id} className="rounded border bg-white px-3 py-2">
-                      <div className="text-sm font-semibold">{u.name || "Unnamed User"}</div>
-                      <div className="text-xs text-gray-600">{u.email || "No email"}</div>
+                    <div
+                      key={u._id}
+                      className="flex items-center justify-between gap-3 rounded border bg-white px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold truncate">
+                          {u.name || "Unnamed User"}
+                        </div>
+                        <div className="text-xs text-gray-600 truncate">
+                          {u.email || "No email"}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => removeRsvpUser(u._id)}
+                        disabled={removingUserId === u._id}
+                        className={`rounded border px-2 py-1 text-sm font-semibold ${
+                          removingUserId === u._id
+                            ? "bg-gray-200 text-gray-600 cursor-not-allowed"
+                            : "hover:bg-red-50 text-red-600 border-red-300"
+                        }`}
+                        type="button"
+                      >
+                        {removingUserId === u._id ? "Removing..." : "Remove"}
+                      </button>
                     </div>
                   ))}
                 </div>

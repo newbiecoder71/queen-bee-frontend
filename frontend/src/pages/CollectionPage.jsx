@@ -15,6 +15,7 @@ const CollectionPage = () => {
 
   const sidebarRef = useRef(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const activeSearch = searchParams.get("search");
 
   const filters = useMemo(() => {
     const baseFilters = Object.fromEntries([...searchParams]);
@@ -72,6 +73,19 @@ const CollectionPage = () => {
         <Link to="/collections/all">
           <h2 className="text-2xl uppercase mb-4">All Collections</h2>
         </Link>
+        {activeSearch && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border bg-gray-50 px-3 py-2">
+            <p className="text-sm text-gray-700">
+              Showing results for: <span className="font-semibold">"{activeSearch}"</span>
+            </p>
+            <Link
+              to="/collections/all"
+              className="text-sm font-semibold text-blue-700 hover:underline"
+            >
+              Back to all collections
+            </Link>
+          </div>
+        )}
 
         {/* Sort Options */}
         <div className="flex justify-end mb-4 mr-3">

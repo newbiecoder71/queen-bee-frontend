@@ -5,10 +5,14 @@ import login from "/images/IMG_1593.jpg";
 import { loginUser, clearError } from "../redux/slices/authSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { mergeCart, fetchCart } from "../redux/slices/cartSlice";
+import ClearableInput from "../components/Forms/ClearableInput";
+
+const SAVED_LOGIN_EMAIL_KEY = "savedLoginEmail";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberEmail, setRememberEmail] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,6 +23,14 @@ const Login = () => {
   const isCheckoutRedirect = redirect.includes("checkout");
 
   const target = isCheckoutRedirect ? "/checkout" : redirect;
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem(SAVED_LOGIN_EMAIL_KEY);
+    if (!savedEmail) return;
+
+    setEmail(savedEmail);
+    setRememberEmail(true);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -68,8 +80,25 @@ const Login = () => {
       });
   }, [user]);      
 
+  const toggleRememberEmail = () => {
+    if (rememberEmail) {
+      localStorage.removeItem(SAVED_LOGIN_EMAIL_KEY);
+      setRememberEmail(false);
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) return;
+
+    localStorage.setItem(SAVED_LOGIN_EMAIL_KEY, trimmedEmail);
+    setRememberEmail(true);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (rememberEmail && email.trim()) {
+      localStorage.setItem(SAVED_LOGIN_EMAIL_KEY, email.trim());
+    }
     dispatch(loginUser({ email, password }));
   };
 
@@ -89,39 +118,46 @@ const Login = () => {
           </p>
 
           {/* Email Input */}
-          <div className="mb-4">
-            <label className="block text-sm font-semibold mb-2">Email</label>
-            <input
+          <div className="mb-1">
+            <ClearableInput
+              label="Email"
               type="email"
               value={email}
+              placeholder="Enter your email address"
+              autoComplete="username"
               onChange={(e) => {
                 setEmail(e.target.value);
-                if (error) dispatch(clearError()); // clear error when typing
+                if (error) dispatch(clearError());
               }}
-              className="w-full p-2 border rounded"
-              placeholder="Enter your email address"
+              onClear={() => setEmail("")}
+              error={error?.field === "email" ? error.message : null}
             />
-            {error?.field === "email" && (
-              <p className="text-red-600 text-sm mt-1">{error.message}</p>
-            )}
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={toggleRememberEmail}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                {rememberEmail ? "Forget saved email" : "Remember this email"}
+              </button>
+            </div>
           </div>
 
           {/* Password Input */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold mb-2">Password</label>
-            <input
+            <ClearableInput
+              label="Password"
               type="password"
               value={password}
+              placeholder="Enter your password"
+              autoComplete="current-password"
               onChange={(e) => {
                 setPassword(e.target.value);
-                if (error) dispatch(clearError()); // clear error when typing
+                if (error) dispatch(clearError());
               }}
-              className="w-full p-2 border rounded"
-              placeholder="Enter your password"
+              onClear={() => setPassword("")}
+              error={error?.field === "password" ? error.message : null}
             />
-            {error?.field === "password" && (
-              <p className="text-red-600 text-sm mt-1">{error.message}</p>
-            )}
           </div>
 
           {/* Submit Button */}
