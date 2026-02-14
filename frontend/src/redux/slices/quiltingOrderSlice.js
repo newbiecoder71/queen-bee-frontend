@@ -1,16 +1,24 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
+const getToken = (thunkAPI) =>
+  thunkAPI?.getState?.()?.auth?.token || localStorage.getItem("userToken");
+
 // Fetch all quilting orders for the logged-in user
 export const fetchUserQuiltingOrders = createAsyncThunk(
   "quiltingOrders/fetchUserQuiltingOrders",
   async (_, thunkAPI) => {
     try {
+      const token = getToken(thunkAPI);
+      if (!token) {
+        return thunkAPI.rejectWithValue("Please log in to view your quilting orders.");
+      }
+
       const response = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/quilting-orders/my-quilts`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -28,11 +36,16 @@ export const fetchQuiltingOrderById = createAsyncThunk(
   "quiltingOrders/fetchQuiltingOrderById",
   async (id, thunkAPI) => {
     try {
+      const token = getToken(thunkAPI);
+      if (!token) {
+        return thunkAPI.rejectWithValue("Please log in to view this quilting order.");
+      }
+
       const response = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/quilting-orders/${id}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );

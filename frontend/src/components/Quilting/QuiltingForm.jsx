@@ -1,9 +1,13 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { addToCart } from "../../redux/slices/cartSlice";
 
 const QuiltingForm = ({ onSuccess, onCancel }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
 
   const [widthInches, setWidthInches] = useState("");
   const [heightInches, setHeightInches] = useState("");
@@ -47,7 +51,7 @@ const QuiltingForm = ({ onSuccess, onCancel }) => {
     if (photo) formData.append("photo", photo);
 
     try {
-      await axios.post(
+      const { data: createdOrder } = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/quilting-orders`,
         formData,
         {
@@ -58,7 +62,19 @@ const QuiltingForm = ({ onSuccess, onCancel }) => {
         }
       );
 
-      alert("Quilting order added successfully!");
+      const userId = user?._id || localStorage.getItem("userId");
+      if (userId && createdOrder?._id) {
+        await dispatch(
+          addToCart({
+            itemType: "quilting",
+            quiltingOrderId: createdOrder._id,
+            quantity: 1,
+            userId,
+          })
+        ).unwrap();
+      }
+
+      alert("Quilting order added successfully and added to your cart!");
 
       if (onSuccess) {
         console.log("✅ onSuccess triggered from QuiltingForm");

@@ -66,6 +66,9 @@ const US_STATES = [
   { code: "WY", name: "Wyoming" },
 ];
 
+const getCartItemKey = (item, idx) =>
+  `${item.itemType || "product"}-${item.productId || item.classId || item.quiltingOrderId || idx}`;
+
 const Checkout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -74,6 +77,7 @@ const Checkout = () => {
   const { user } = useSelector((state) => state.auth);
 
   const [checkoutId, setCheckoutId] = useState(null);
+  const [expandedClasses, setExpandedClasses] = useState({});
 
   const [shippingAddress, setShippingAddress] = useState({
     firstName: "",
@@ -109,8 +113,19 @@ const Checkout = () => {
     );
   }, [cart]);
 
+  const taxableSubtotal = useMemo(() => {
+    if (!cart || !cart.products) return 0;
+    return cart.products.reduce((sum, item) => {
+      if (item.itemType === "quilting") return sum;
+      if (typeof item.taxableAmount === "number") {
+        return sum + item.taxableAmount * item.quantity;
+      }
+      return sum + item.price * item.quantity;
+    }, 0);
+  }, [cart]);
+
   const TAX_RATE = 0.081;
-  const tax = +(subtotal * TAX_RATE).toFixed(2);
+  const tax = +(taxableSubtotal * TAX_RATE).toFixed(2);
   const grandTotal = +(subtotal + tax).toFixed(2);
 
   /* ---------------------------------------------------------
@@ -185,13 +200,19 @@ const Checkout = () => {
   /* ---------------------------------------------------------
    * CHANGE QUANTITY INSIDE CHECKOUT
    * --------------------------------------------------------- */
-  const handleQuantityChange = (productId, currentQuantity, delta) => {
+  const handleQuantityChange = (item, delta) => {
+    if (item.itemType === "quilting" || item.itemType === "class") return;
+    const productId = item.productId;
+    const currentQuantity = item.quantity;
     const newQty = currentQuantity + delta;
     if (newQty < 1) return;
 
     dispatch(
       updateCartItemQuantity({
+        itemType: item.itemType || "product",
         productId,
+        quiltingOrderId: item.quiltingOrderId,
+        classId: item.classId,
         quantity: newQty,
       })
     );
@@ -200,8 +221,20 @@ const Checkout = () => {
   /* ---------------------------------------------------------
    * REMOVE FROM CART INSIDE CHECKOUT
    * --------------------------------------------------------- */
-  const handleRemove = (productId) => {
-    dispatch(removeFromCart({ productId }));
+  const handleRemove = (item) => {
+    dispatch(
+      removeFromCart({
+        itemType: item.itemType || "product",
+        productId: item.productId,
+        quiltingOrderId: item.quiltingOrderId,
+        classId: item.classId,
+      })
+    );
+  };
+
+  const toggleClassDetails = (item, idx) => {
+    const key = getCartItemKey(item, idx);
+    setExpandedClasses((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   /* ---------------------------------------------------------
@@ -415,66 +448,105 @@ const Checkout = () => {
         <h3 className="text-lg mb-4">Order Summary</h3>
 
         <div className="border-t py-4 mb-4">
-          {cart.products.map((product) => (
-            <div
-              key={product.productId}
-              className="flex items-start justify-between py-2 border-b"
-            >
-              <div className="flex items-start">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-20 h-24 object-cover mr-4 rounded"
-                />
-                <div>
-                  <h3 className="text-md">{product.name}</h3>
+          {cart.products.map((product, idx) => {
+            const rowKey = getCartItemKey(product, idx);
+            const classItems = Array.isArray(product.classRequiredItems)
+              ? product.classRequiredItems
+              : [];
+            const showClassItems =
+              product.itemType === "class" && classItems.length > 0 && expandedClasses[rowKey];
 
-                  {/* Qty Buttons */}
-                  <div className="flex items-center space-x-2 mt-2">
-                    <button
-                      onClick={() =>
-                        handleQuantityChange(
-                          product.productId,
-                          product.quantity,
-                          -1
-                        )
+            return (
+              <div key={rowKey} className="py-2 border-b">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start">
+                    <img
+                      src={
+                        product.image?.startsWith("/uploads")
+                          ? `${import.meta.env.VITE_BACKEND_URL}${product.image}`
+                          : product.image
                       }
-                      className="px-2 bg-gray-200 rounded"
-                    >
-                      -
-                    </button>
+                      alt={product.name}
+                      className="w-20 h-24 object-cover mr-4 rounded"
+                    />
+                    <div>
+                      <h3 className="text-md">{product.name}</h3>
 
-                    <span>{product.quantity}</span>
+                      {product.itemType === "quilting" || product.itemType === "class" ? (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-xs text-gray-500">
+                            {product.itemType === "class" ? "Class enrollment" : "Quilting service"}
+                          </p>
+                          {product.itemType === "class" && classItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleClassDetails(product, idx)}
+                              className="text-xs font-semibold text-blue-700 hover:underline"
+                            >
+                              {expandedClasses[rowKey] ? "Hide required items" : "Show required items"}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2 mt-2">
+                          <button
+                            onClick={() => handleQuantityChange(product, -1)}
+                            className="px-2 bg-gray-200 rounded"
+                          >
+                            -
+                          </button>
 
-                    <button
-                      onClick={() =>
-                        handleQuantityChange(
-                          product.productId,
-                          product.quantity,
-                          1
-                        )
-                      }
-                      className="px-2 bg-gray-200 rounded"
-                    >
-                      +
-                    </button>
+                          <span>{product.quantity}</span>
+
+                          <button
+                            onClick={() => handleQuantityChange(product, 1)}
+                            className="px-2 bg-gray-200 rounded"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => handleRemove(product)}
+                        className="text-red-500 text-sm mt-2"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Remove */}
-                  <button
-                    onClick={() => handleRemove(product.productId)}
-                    className="text-red-500 text-sm mt-2"
-                  >
-                    Remove
-                  </button>
+                  <p className="text-md">${Number(product.price).toFixed(2)}</p>
                 </div>
-              </div>
 
-              <p className="text-md">
-                ${Number(product.price).toFixed(2)}
-              </p>
-            </div>
-          ))}
+                {showClassItems && (
+                  <div className="mt-3 ml-24 rounded border bg-white p-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">
+                      Required items (tax applies to these items only)
+                    </p>
+                    <div className="space-y-2">
+                      {classItems.map((item, classIdx) => (
+                        <div
+                          key={`${item.product || item.title || "required"}-${classIdx}`}
+                          className="flex items-center justify-between text-sm"
+                        >
+                          <span>
+                            {item.title} x {Number(item.quantity || 1)}
+                          </span>
+                          <span>
+                            $
+                            {(
+                              Number(item.unitPrice || 0) * Number(item.quantity || 1)
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Totals */}

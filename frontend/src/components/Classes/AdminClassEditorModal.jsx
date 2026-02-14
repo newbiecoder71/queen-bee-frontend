@@ -11,6 +11,8 @@ const emptyForm = {
   end: "",
   capacity: 10,
   basePrice: 0,
+  imageUrl: "",
+  imageAltText: "",
   requiredItems: [],
   isPublished: true,
 };
@@ -22,6 +24,8 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
   const [q, setQ] = useState("");
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const classImageInputRef = useRef(null);
 
   // ✅ RSVP list (admin)
   const [rsvpUsers, setRsvpUsers] = useState([]);
@@ -269,6 +273,43 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
     }));
   };
 
+  const handleClassImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Missing admin token. Please log in again.");
+      return;
+    }
+
+    const body = new FormData();
+    body.append("image", file);
+
+    setImageUploading(true);
+    axios
+      .post(`${API}/api/upload`, body, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      })
+      .then(({ data }) => {
+        if (!data?.imagePath) throw new Error("Image upload failed");
+        setForm((prev) => ({
+          ...prev,
+          imageUrl: data.imagePath,
+          imageAltText: prev.imageAltText || prev.title || "Class image",
+        }));
+      })
+      .catch((err) => {
+        alert(err.response?.data?.message || err.message || "Image upload failed");
+      })
+      .finally(() => {
+        setImageUploading(false);
+        if (classImageInputRef.current) classImageInputRef.current.value = "";
+      });
+  };
+
   const updateItemQty = (productId, qty) => {
     setForm((prev) => ({
       ...prev,
@@ -295,6 +336,9 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
       ...form,
       capacity: Number(form.capacity),
       basePrice: Number(form.basePrice),
+      images: form.imageUrl
+        ? [{ url: form.imageUrl.trim(), altText: form.imageAltText?.trim() || form.title }]
+        : [],
     };
 
     try {
@@ -372,6 +416,42 @@ const AdminClassEditorModal = ({ open, onClose, initialValue, onSaved }) => {
                 onChange={(e) => setForm({ ...form, instructor: e.target.value })}
               />
             </Field>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Field label="Class Image URL (optional)">
+                <input
+                  className="w-full rounded border p-2"
+                  value={form.imageUrl || ""}
+                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                  placeholder="https://..."
+                />
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    ref={classImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleClassImageUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => classImageInputRef.current?.click()}
+                    disabled={imageUploading}
+                    className="rounded bg-gray-100 px-3 py-1 text-sm font-semibold hover:bg-gray-200"
+                  >
+                    {imageUploading ? "Uploading..." : "Upload Image"}
+                  </button>
+                </div>
+              </Field>
+              <Field label="Image Alt Text (optional)">
+                <input
+                  className="w-full rounded border p-2"
+                  value={form.imageAltText || ""}
+                  onChange={(e) => setForm({ ...form, imageAltText: e.target.value })}
+                  placeholder="Class image description"
+                />
+              </Field>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="Start">
@@ -732,6 +812,8 @@ const toForm = (cls) => {
     title: cls.title || "",
     description: cls.description || "",
     instructor: cls.instructor || "",
+    imageUrl: cls.images?.[0]?.url || "",
+    imageAltText: cls.images?.[0]?.altText || "",
     start: toLocalInput(cls.start),
     end: toLocalInput(cls.end),
     capacity: cls.capacity ?? 10,

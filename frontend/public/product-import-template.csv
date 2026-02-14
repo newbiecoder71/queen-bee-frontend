@@ -1,0 +1,2 @@
+name,description,price,countInStock,sku,category,brand,theme,collections,material,imageUrl,imageAltText,isFeatured,isPublished,tags,metaTitle,metaDescription,metaKeywords,length,width,height,weight,discountPrice
+Sample Product,Example description for your product,12.99,25,SKU-001,Fabric,Sample Brand,Fall,Seasonal,Cotton,https://example.com/image.jpg,Sample product image,false,true,quilting|cotton|fall,Sample Meta Title,Sample meta description,quilting,fabric,10,5,2,0.5,0

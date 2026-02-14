@@ -12,6 +12,7 @@ import quiltingOrderReducer from "./slices/quiltingOrderSlice";
 import classesReducer from "./slices/classesSlice";
 import messagesReducer from "./slices/messagesSlice";
 import newsletterReducer from "./slices/newsletterSlice";
+import wishlistReducer from "./slices/wishlistSlice";
 
 const store = configureStore({
   reducer: {
@@ -28,6 +29,7 @@ const store = configureStore({
     classes: classesReducer,
     messages: messagesReducer,
     newsletter: newsletterReducer,
+    wishlist: wishlistReducer,
   },
 });
 
