@@ -1,6 +1,50 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { HiHeart, HiOutlineHeart } from "react-icons/hi2";
+import { toast } from "sonner";
+import {
+  addToWishlist,
+  fetchWishlist,
+  removeFromWishlist,
+} from "../../redux/slices/wishlistSlice";
 
 const ProductGrid = ({ products, loading, error }) => {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { user } = useSelector((state) => state.auth);
+    const { items: wishlistItems, hasLoaded } = useSelector((state) => state.wishlist);
+
+    useEffect(() => {
+        if (!user || hasLoaded) return;
+        dispatch(fetchWishlist());
+    }, [dispatch, user, hasLoaded]);
+
+    const wishlistIds = new Set(wishlistItems.map((item) => item._id));
+
+    const handleWishlistClick = async (e, productId, isWishlisted) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!user) {
+            navigate(`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`);
+            return;
+        }
+
+        try {
+            if (isWishlisted) {
+                await dispatch(removeFromWishlist(productId)).unwrap();
+                toast.success("Removed from favorites");
+            } else {
+                await dispatch(addToWishlist(productId)).unwrap();
+                toast.success("Added to favorites");
+            }
+        } catch (err) {
+            toast.error(err || "Could not update favorites");
+        }
+    };
+
     if (loading) {
         return <p>Loading...</p>;
     }
@@ -10,8 +54,23 @@ const ProductGrid = ({ products, loading, error }) => {
     
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {products.map((product, index) => (
-            <Link key={index} to={`/product/${product._id}`} className="block">
+        {products.map((product) => (
+            <div key={product._id} className="relative">
+                <button
+                    type="button"
+                    onClick={(e) =>
+                        handleWishlistClick(e, product._id, wishlistIds.has(product._id))
+                    }
+                    className="absolute right-3 top-3 z-10 rounded-full bg-white/90 p-2 shadow hover:bg-white"
+                    aria-label={wishlistIds.has(product._id) ? "Remove from favorites" : "Add to favorites"}
+                >
+                    {wishlistIds.has(product._id) ? (
+                        <HiHeart className="h-5 w-5 text-red-500" />
+                    ) : (
+                        <HiOutlineHeart className="h-5 w-5 text-gray-700" />
+                    )}
+                </button>
+                <Link to={`/product/${product._id}`} className="block">
                 <div className="bg-white p-4 rounded-lg">
                     <div className="w-full h-96 mb-4">
                         {product.images?.[0]?.url ? (
@@ -32,7 +91,8 @@ const ProductGrid = ({ products, loading, error }) => {
                         $ {product.price}
                     </p>
                 </div>
-            </Link>
+                </Link>
+            </div>
         ))}
     </div>
   );

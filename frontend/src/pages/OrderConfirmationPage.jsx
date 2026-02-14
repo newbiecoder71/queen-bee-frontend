@@ -34,9 +34,9 @@ const OrderConfirmationPage = () => {
   }
 
   const items = checkout.checkoutItems || checkout.orderItems || [];
-  const subtotal = checkout.totalPrice || 0;
-  const tax = +(subtotal * 0.07).toFixed(2);
-  const grandTotal = checkout.grandTotal || +(subtotal + tax).toFixed(2);
+  const grandTotal = Number(checkout.grandTotal || 0);
+  const tax = Number(checkout.taxes || 0);
+  const subtotal = Number((grandTotal - tax).toFixed(2));
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white">
@@ -63,10 +63,14 @@ const OrderConfirmationPage = () => {
         {/* Ordered Items */}
         <div className="mb-8">
           {items.length > 0 ? (
-            items.map((item) => (
-              <div key={item.productId} className="flex items-center mb-4">
+            items.map((item, idx) => (
+              <div key={item.productId || item.quiltingOrderId || idx} className="flex items-center mb-4">
                 <img
-                  src={item.image || "/placeholder.png"}
+                  src={
+                    item.image?.startsWith("/uploads")
+                      ? `${import.meta.env.VITE_BACKEND_URL}${item.image}`
+                      : item.image || "/placeholder.png"
+                  }
                   alt={item.name || "Product"}
                   className="w-16 h-16 object-cover rounded-md mr-4"
                 />
@@ -88,7 +92,7 @@ const OrderConfirmationPage = () => {
             <p>${subtotal.toFixed(2)}</p>
           </div>
           <div className="flex justify-between text-lg">
-            <p>Tax (7%)</p>
+            <p>Tax</p>
             <p>${tax.toFixed(2)}</p>
           </div>
           <div className="flex justify-between text-lg font-bold border-t pt-2">

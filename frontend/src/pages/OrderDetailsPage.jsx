@@ -70,13 +70,29 @@ const OrderDetailsPage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {orderDetails.orderItems.map((item) => (
-                                <tr key={item.productId} className="border-b">
+                            {orderDetails.orderItems.map((item, idx) => (
+                                <tr key={item.productId || item.quiltingOrderId || idx} className="border-b">
                                     <td className="py-2 px-4 flex items-center">
-                                        <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-lg mr-4" />
-                                        <Link to={`/product/${item.productId}`} className="text-blue-500 hover:underline">
-                                            {item.name}
-                                        </Link>
+                                        {item.image ? (
+                                          <img
+                                            src={
+                                              item.image.startsWith("/uploads")
+                                                ? `${import.meta.env.VITE_BACKEND_URL}${item.image}`
+                                                : item.image
+                                            }
+                                            alt={item.name}
+                                            className="w-12 h-12 object-cover rounded-lg mr-4"
+                                          />
+                                        ) : (
+                                          <div className="w-12 h-12 bg-gray-100 rounded-lg mr-4" />
+                                        )}
+                                        {item.itemType === "quilting" || item.itemType === "class" ? (
+                                          <span>{item.name}</span>
+                                        ) : (
+                                          <Link to={`/product/${item.productId}`} className="text-blue-500 hover:underline">
+                                              {item.name}
+                                          </Link>
+                                        )}
                                     </td>
                                     <td className="py-2 px-4">${item.price}</td>
                                     <td className="py-2 px-4">{item.quantity}</td>

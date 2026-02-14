@@ -7,14 +7,30 @@ import QuiltingForm from "../components/Quilting/QuiltingForm";
 const MyQuiltsPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const { quiltingOrders, loading, error } = useSelector(
     (state) => state.quiltingOrders
   );
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
+    if (!user) {
+      navigate("/login?redirect=my-quilts");
+      return;
+    }
     dispatch(fetchUserQuiltingOrders());
-  }, [dispatch]);
+  }, [dispatch, navigate, user]);
+
+  useEffect(() => {
+    if (!error) return;
+    const msg = String(error).toLowerCase();
+    if (msg.includes("not authorized") || msg.includes("token failed")) {
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("userInfo");
+      localStorage.removeItem("userId");
+      navigate("/login?redirect=my-quilts");
+    }
+  }, [error, navigate]);
 
   const handleRowClick = (quiltingOrderId) => {
     navigate(`/my-quilts/${quiltingOrderId}`);
@@ -54,9 +70,12 @@ const MyQuiltsPage = () => {
             <tbody>
               {quiltingOrders.length > 0 ? (
                 quiltingOrders.map((quiltingOrder) => {
-                  const price = quiltingOrder.squareInches
-                    ? (quiltingOrder.squareInches * 0.0125).toFixed(2)
-                    : "N/A";
+                  const price =
+                    typeof quiltingOrder.totalPrice === "number"
+                      ? quiltingOrder.totalPrice.toFixed(2)
+                      : quiltingOrder.squareInches
+                      ? (quiltingOrder.squareInches * 0.0125).toFixed(2)
+                      : "N/A";
 
                   return (
                     <tr

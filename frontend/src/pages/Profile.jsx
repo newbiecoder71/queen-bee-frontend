@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import MyOrdersPage from "./MyOrdersPage";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { logout } from "../redux/slices/authSlice";
 import { clearCart } from "../redux/slices/cartSlice";
@@ -8,6 +8,12 @@ import axios from "axios";
 import MyClassesCalendarModal from "../components/Classes/MyClassesCalendarModal";
 import { FaCalendarAlt } from "react-icons/fa";
 import { FaGoogle, FaApple } from "react-icons/fa";
+import { HiHeart } from "react-icons/hi2";
+import { addToCart } from "../redux/slices/cartSlice";
+import {
+  fetchWishlist,
+  removeFromWishlist,
+} from "../redux/slices/wishlistSlice";
 
 const API = import.meta.env.VITE_BACKEND_URL;
 
@@ -24,6 +30,13 @@ const Profile = () => {
   const [classesError, setClassesError] = useState(null);
   const [myClassesCalendarOpen, setMyClassesCalendarOpen] = useState(false);
   const [cancelingId, setCancelingId] = useState(null);
+  const [addingClassId, setAddingClassId] = useState(null);
+  const [removingFavoriteId, setRemovingFavoriteId] = useState(null);
+  const {
+    items: wishlistItems,
+    hasLoaded: wishlistLoaded,
+    loading: wishlistLoading,
+  } = useSelector((state) => state.wishlist);
 
   useEffect(() => {
     if (!user && !isLoggingOut) {
@@ -57,6 +70,11 @@ const Profile = () => {
 
     loadMyClasses();
   }, [user, token]);
+
+  useEffect(() => {
+    if (!user || wishlistLoaded) return;
+    dispatch(fetchWishlist());
+  }, [dispatch, user, wishlistLoaded]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -205,6 +223,37 @@ const Profile = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleAddClassToCart = async (cls) => {
+    try {
+      setAddingClassId(cls._id);
+      const userId = token ? user?._id : localStorage.getItem("userId");
+      await dispatch(
+        addToCart({
+          itemType: "class",
+          classId: cls._id,
+          quantity: 1,
+          userId,
+        })
+      ).unwrap();
+      alert("Class added to cart.");
+    } catch (err) {
+      alert(err || "Could not add class to cart");
+    } finally {
+      setAddingClassId(null);
+    }
+  };
+
+  const handleRemoveFavorite = async (productId) => {
+    try {
+      setRemovingFavoriteId(productId);
+      await dispatch(removeFromWishlist(productId)).unwrap();
+    } catch (err) {
+      alert(err || "Error removing favorite");
+    } finally {
+      setRemovingFavoriteId(null);
+    }
+  };
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -225,6 +274,70 @@ const Profile = () => {
 
           {/* Right Section - Orders + Classes */}
           <div className="w-full md:w-2/3 lg:w-3/4 space-y-6">
+            <div className="rounded-lg bg-white shadow-sm border p-4">
+              <div className="flex items-center justify-between ml-3 mb-3">
+                <h2 className="text-2xl font-bold ml-4">My Favorites</h2>
+              </div>
+
+              {wishlistLoading && (
+                <div className="text-sm text-gray-600">Loading favorites...</div>
+              )}
+
+              {!wishlistLoading && wishlistItems.length === 0 && (
+                <div className="text-sm text-gray-600">
+                  You have not saved any favorites yet.
+                </div>
+              )}
+
+              {!wishlistLoading && wishlistItems.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {wishlistItems.map((item) => (
+                    <div key={item._id} className="rounded-lg shadow-md border ml-5 p-3">
+                      <div className="flex items-start gap-3">
+                        <Link to={`/product/${item._id}`} className="shrink-0">
+                          {item.images?.[0]?.url ? (
+                            <img
+                              src={item.images[0].url}
+                              alt={item.images[0].altText || item.name}
+                              className="h-16 w-16 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="h-16 w-16 rounded bg-gray-100" />
+                          )}
+                        </Link>
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            to={`/product/${item._id}`}
+                            className="font-semibold hover:underline line-clamp-2"
+                          >
+                            {item.name}
+                          </Link>
+                          <div className="text-sm text-gray-600 mt-1">
+                            ${Number(item.price ?? 0).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => handleRemoveFavorite(item._id)}
+                          disabled={removingFavoriteId === item._id}
+                          className={`inline-flex items-center gap-2 rounded px-3 py-1 text-sm font-semibold border ${
+                            removingFavoriteId === item._id
+                              ? "bg-gray-200 text-gray-600 cursor-not-allowed"
+                              : "bg-white hover:bg-red-50 text-red-600 border-red-300"
+                          }`}
+                          type="button"
+                        >
+                          <HiHeart className="h-4 w-4" />
+                          {removingFavoriteId === item._id ? "Removing..." : "Remove"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* My Orders */}
             <div className="rounded-lg bg-white shadow-sm border p-4">
               <MyOrdersPage />
@@ -313,6 +426,18 @@ const Profile = () => {
                       </div>
 
                       <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => handleAddClassToCart(c)}
+                          disabled={addingClassId === c._id}
+                          className={`rounded px-3 py-1 text-sm font-semibold border mr-2 ${
+                            addingClassId === c._id
+                              ? "bg-gray-200 text-gray-600 cursor-not-allowed"
+                              : "bg-white hover:bg-blue-50 text-blue-700 border-blue-300"
+                          }`}
+                          type="button"
+                        >
+                          {addingClassId === c._id ? "Adding..." : "Add To Cart"}
+                        </button>
                         <button
                           onClick={() => handleCancelRsvp(c._id)}
                           disabled={cancelingId === c._id}

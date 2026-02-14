@@ -28,6 +28,7 @@ import QuiltingForm from "./components/Quilting/QuiltingForm";
 import ContactPage from "./pages/ContactPage";
 import ScrollToTop from "./components/Common/ScrollToTop";
 import ClassesPage from "./pages/ClassesPage";
+import ClassDetailsPage from "./pages/ClassDetailsPage";
 import ServicesPage from "./pages/ServicesPage";
 import AboutPage from "./pages/AboutPage";
 import AdminMessagesPage from "./components/Admin/AdminMessagesPage";
@@ -71,6 +72,7 @@ const App = () => {
             <Route path="my-quilts/:id" element={<MyQuiltsDetailsPage />} />
             <Route path="quilting-form" element={<QuiltingForm />} />
             <Route path="classes" element={<ClassesPage />} />
+            <Route path="classes/:id" element={<ClassDetailsPage />} />
             <Route path="contact" element={<ContactPage />} />
             <Route path="services" element={<ServicesPage />} />
             <Route path="about" element={<AboutPage />} />

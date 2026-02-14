@@ -1,25 +1,27 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const ProductManagement = () => {
   const [products, setProducts] = useState([]);
+  const [importingCsv, setImportingCsv] = useState(false);
+  const csvInputRef = useRef(null);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/products`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("userToken")}`, // if admin protected
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
+      setProducts(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/products`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("userToken")}`, // if admin protected
-          },
-        });
-        if (!res.ok) throw new Error("Failed to fetch products");
-        const data = await res.json();
-        setProducts(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
     fetchProducts();
   }, []);
 
@@ -43,15 +45,84 @@ const ProductManagement = () => {
     }
   };
 
+  const handleCsvSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const token = localStorage.getItem("userToken");
+    if (!token) {
+      alert("Missing admin token. Please log in again.");
+      return;
+    }
+
+    const body = new FormData();
+    body.append("file", file);
+
+    setImportingCsv(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/products/import-csv`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "CSV import failed");
+
+      await fetchProducts();
+
+      const failurePreview = (data.failed || [])
+        .slice(0, 5)
+        .map((f) => `Row ${f.row}: ${f.reason}`)
+        .join("\n");
+
+      alert(
+        `CSV import finished.\nCreated: ${data.createdCount}\nFailed: ${data.failedCount}` +
+          (failurePreview ? `\n\nFirst errors:\n${failurePreview}` : "")
+      );
+    } catch (err) {
+      alert(err.message || "CSV import failed");
+    } finally {
+      setImportingCsv(false);
+      if (csvInputRef.current) csvInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-between items-center mb-6">  
             <h2 className="text-2xl font-bold mb-6">Product Management</h2>
-            <Link to="/admin/products/add">
-            <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                Add Product
-            </button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <a
+                href="/product-import-template.csv"
+                download
+                className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition text-sm font-semibold"
+              >
+                Download CSV Template
+              </a>
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={handleCsvSelected}
+              />
+              <button
+                type="button"
+                onClick={() => csvInputRef.current?.click()}
+                disabled={importingCsv}
+                className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition disabled:opacity-60"
+              >
+                {importingCsv ? "Importing..." : "Upload CSV"}
+              </button>
+              <Link to="/admin/products/add">
+                <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                  Add Product
+                </button>
+              </Link>
+            </div>
         </div>   
         <div className="overflow-x-auto shadow-md sm:rounded-lg">
             <table className="min-w-full text-left text-gray-500">

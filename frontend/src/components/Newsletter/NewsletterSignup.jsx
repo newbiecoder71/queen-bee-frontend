@@ -1,31 +1,38 @@
 import { useRef, useState } from "react";
 import axios from "axios";
+import { HiXMark } from "react-icons/hi2";
 
 const API = import.meta.env.VITE_BACKEND_URL;
 
 const NewsletterSignup = () => {
   const [status, setStatus] = useState("idle");
   const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
   const [honey, setHoney] = useState(""); // honeypot
   const formRef = useRef(null);
 
   const submit = async (e) => {
     e.preventDefault();
     setStatus("sending");
+    setMessage("");
 
     try {
-      await axios.post(`${API}/api/newsletter/subscribe`, {
+      const { data } = await axios.post(`${API}/api/newsletter/subscribe`, {
         email,
         honey,
         source: "site",
       });
 
       setStatus("sent");
-      setEmail("");
+      setMessage(data?.message || "You're signed up for the newsletter!");
       setHoney("");
+      setEmail("");
       formRef.current?.reset();
     } catch (err) {
       console.error(err);
+      setMessage(
+        err.response?.data?.message || "Something went wrong. Please try again."
+      );
       setStatus("error");
     }
   };
@@ -39,18 +46,17 @@ const NewsletterSignup = () => {
 
       {status === "sent" && (
         <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-emerald-800 text-sm">
-          Thanks! You’re signed up.
+          {message}
         </div>
       )}
 
       {status === "error" && (
         <div className="mt-3 rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 text-sm">
-          Something went wrong. Please try again.
+          {message}
         </div>
       )}
 
-      <form ref={formRef} onSubmit={submit} className="mt-4 flex gap-0">
-        {/* honeypot hidden */}
+      <form ref={formRef} onSubmit={submit} className="mt-4 flex items-center gap-0">
         <input
           className="hidden"
           value={honey}
@@ -59,14 +65,26 @@ const NewsletterSignup = () => {
           autoComplete="off"
         />
 
-        <input
-          required
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your email"
-          className="flex-1 p-1 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-black"
-        />
+        <div className="relative flex-1">
+          <input
+            required
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            className="w-full p-1 pr-9 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-black"
+          />
+          {email && (
+            <button
+              type="button"
+              onClick={() => setEmail("")}
+              className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-700"
+              aria-label="Clear email"
+            >
+              <HiXMark className="h-5 w-5" />
+            </button>
+          )}
+        </div>
 
         <button
           type="submit"
@@ -75,7 +93,6 @@ const NewsletterSignup = () => {
         >
           {status === "sending" ? "Saving..." : "Sign Up"}
         </button>
-
       </form>
     </div>
   );

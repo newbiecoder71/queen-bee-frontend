@@ -1,24 +1,65 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { fetchQuiltingOrderById } from "../redux/slices/quiltingOrderSlice";
+import { addToCart } from "../redux/slices/cartSlice";
 
 const MyQuiltsDetailsPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const { quiltingOrder, loading, error } = useSelector(
     (state) => state.quiltingOrders
   );
 
   useEffect(() => {
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent(`/my-quilts/${id}`)}`);
+      return;
+    }
     if (id) {
       dispatch(fetchQuiltingOrderById(id));
     }
-  }, [dispatch, id]);
+  }, [dispatch, id, navigate, user]);
+
+  useEffect(() => {
+    if (!error) return;
+    const msg = String(error).toLowerCase();
+    if (msg.includes("not authorized") || msg.includes("token failed")) {
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("userInfo");
+      localStorage.removeItem("userId");
+      navigate(`/login?redirect=${encodeURIComponent(`/my-quilts/${id}`)}`);
+    }
+  }, [error, id, navigate]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">Error: {error}</p>;
   if (!quiltingOrder) return <p>No quilting order found</p>;
+
+  const handleAddToCart = async () => {
+    try {
+      const userId = user?._id || localStorage.getItem("userId");
+      if (!userId) {
+        navigate(`/login?redirect=${encodeURIComponent(`/my-quilts/${id}`)}`);
+        return;
+      }
+
+      await dispatch(
+        addToCart({
+          itemType: "quilting",
+          quiltingOrderId: quiltingOrder._id,
+          quantity: 1,
+          userId,
+        })
+      ).unwrap();
+
+      alert("Quilting service added to cart.");
+    } catch (err) {
+      alert(err || "Could not add quilting service to cart.");
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6 shadow-md rounded-md">
@@ -59,7 +100,11 @@ const MyQuiltsDetailsPage = () => {
           </p>
           <p>
             <span className="font-semibold">Price:</span>{" "}
-            {quiltingOrder.squareInches ? `$${(quiltingOrder.squareInches * 0.0125).toFixed(2)}` : "N/A"}
+            {typeof quiltingOrder.totalPrice === "number"
+              ? `$${quiltingOrder.totalPrice.toFixed(2)}`
+              : quiltingOrder.squareInches
+              ? `$${(quiltingOrder.squareInches * 0.0125).toFixed(2)}`
+              : "N/A"}
           </p>
           <p>
             <span className="font-semibold">Status:</span>{" "}
@@ -94,6 +139,17 @@ const MyQuiltsDetailsPage = () => {
           {quiltingOrder.dateDroppedOff && <p><span className="font-semibold">Date Dropped Off:</span> {new Date(quiltingOrder.dateDroppedOff).toLocaleDateString()}</p>}
           {quiltingOrder.datePickedUp && <p><span className="font-semibold">Date Picked Up:</span> {new Date(quiltingOrder.datePickedUp).toLocaleDateString()}</p>}
           {quiltingOrder.notes && <p><span className="font-semibold">Notes:</span> {quiltingOrder.notes}</p>}
+
+          {!quiltingOrder.isPaid && (
+            <div className="pt-4">
+              <button
+                onClick={handleAddToCart}
+                className="rounded bg-black px-4 py-2 text-white hover:bg-gray-800"
+              >
+                Add Quilting Service to Cart
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

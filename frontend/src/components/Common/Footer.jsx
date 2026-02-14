@@ -26,6 +26,9 @@ const Footer = () => {
                 <h3 className="text-lg text-gray-800 mb-4">Shop</h3>
                 <ul className="space-y-2 text-gray-600">
                     <li>
+                        <Link to="/collections/all" className="hover:text-gray-500 transition-colors">All</Link>
+                    </li>
+                    <li>
                         <Link to="/collections/all?category=Fabric" className="hover:text-gray-500 transition-colors">Fabric</Link>
                     </li>
                     <li>

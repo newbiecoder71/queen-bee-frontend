@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FaCalendarAlt, FaPlus } from "react-icons/fa";
-import {
-  fetchClasses,
-  rsvpToClass,
-} from "../redux/slices/classesSlice";
+import { toast } from "sonner";
+import { fetchClasses, rsvpToClass } from "../redux/slices/classesSlice";
+import { addToCart } from "../redux/slices/cartSlice";
 import ClassesCalendarModal from "../components/Classes/ClassesCalendarModal";
 import AdminClassEditorModal from "../components/Classes/AdminClassEditorModal";
 
@@ -27,7 +26,6 @@ const ClassesPage = () => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
-
   const [rsvpOpen, setRsvpOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
 
@@ -37,8 +35,6 @@ const ClassesPage = () => {
     dispatch(fetchClasses());
   }, [dispatch]);
 
-  /* ---------------- helpers ---------------- */
-
   const formatTime = (d) =>
     new Date(d).toLocaleTimeString([], {
       hour: "numeric",
@@ -46,7 +42,7 @@ const ClassesPage = () => {
     });
 
   const timeRange = (start, end) =>
-    start && end ? `${formatTime(start)} – ${formatTime(end)}` : "";
+    start && end ? `${formatTime(start)} - ${formatTime(end)}` : "";
 
   const rsvpCount = (c) =>
     typeof c.rsvpCount === "number"
@@ -60,8 +56,6 @@ const ClassesPage = () => {
     return Math.max(0, c.capacity - rsvpCount(c));
   };
 
-  /* ---------------- calendar events ---------------- */
-
   const events = useMemo(
     () =>
       classesList.map((c) => ({
@@ -73,8 +67,6 @@ const ClassesPage = () => {
       })),
     [classesList]
   );
-
-  /* ---------------- actions ---------------- */
 
   const openCreate = () => {
     setEditingClass(null);
@@ -92,15 +84,35 @@ const ClassesPage = () => {
       navigate(`/login?redirect=${encodeURIComponent(`/classes?rsvp=${cls._id}`)}`);
       return;
     }
-  
     setSelectedClass(cls);
     setRsvpOpen(true);
-  };  
+  };
 
   const submitRsvp = async () => {
     if (!selectedClass) return;
-    await dispatch(rsvpToClass(selectedClass._id)).unwrap();
-    setRsvpOpen(false);
+    try {
+      try {
+        await dispatch(rsvpToClass(selectedClass._id)).unwrap();
+      } catch (rsvpErr) {
+        const msg = String(rsvpErr || "").toLowerCase();
+        if (!msg.includes("already rsvped")) throw rsvpErr;
+      }
+
+      const userId = localStorage.getItem("userId");
+      await dispatch(
+        addToCart({
+          itemType: "class",
+          classId: selectedClass._id,
+          quantity: 1,
+          userId,
+        })
+      ).unwrap();
+
+      toast.success("Class added to your cart");
+      setRsvpOpen(false);
+    } catch (err) {
+      toast.error(err || "Could not add class to cart");
+    }
   };
 
   const handleSaved = () => {
@@ -108,7 +120,8 @@ const ClassesPage = () => {
     dispatch(fetchClasses());
   };
 
-  /* ---------------- render ---------------- */
+  const classImageSrc = (url) =>
+    url?.startsWith("/uploads") ? `${import.meta.env.VITE_BACKEND_URL}${url}` : url;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -141,7 +154,7 @@ const ClassesPage = () => {
         </div>
       </div>
 
-      {loading && <div className="mt-6">Loading…</div>}
+      {loading && <div className="mt-6">Loading...</div>}
       {error && <div className="mt-6 text-red-600">{error}</div>}
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -154,10 +167,27 @@ const ClassesPage = () => {
               key={c._id}
               className="relative group rounded-lg border p-4 bg-white shadow-sm"
             >
+              <Link to={`/classes/${c._id}`} className="block mb-3">
+                {c.images?.[0]?.url ? (
+                  <img
+                    src={classImageSrc(c.images[0].url)}
+                    alt={c.images[0].altText || c.title}
+                    className="w-full h-48 rounded-md object-cover border"
+                  />
+                ) : (
+                  <div className="w-full h-48 rounded-md border bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-500">
+                    Class Image
+                  </div>
+                )}
+              </Link>
 
               <div className="flex justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">{c.title}</h3>
+                  <h3 className="text-lg font-semibold">
+                    <Link to={`/classes/${c._id}`} className="hover:underline">
+                      {c.title}
+                    </Link>
+                  </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {new Date(c.start).toLocaleString()}
                   </p>
@@ -172,22 +202,31 @@ const ClassesPage = () => {
               )}
 
               <div className="mt-4 flex justify-between items-center">
-                {isAdmin ? (
-                  <button
-                    onClick={() => openEdit(c)}
-                    className="text-sm font-semibold text-blue-700 hover:underline"
+                <div className="flex items-center gap-3">
+                  <Link
+                    to={`/classes/${c._id}`}
+                    className="text-sm font-semibold text-gray-700 hover:underline"
                   >
-                    Edit
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => openRsvp(c)}
-                    disabled={spots === 0}
-                    className="text-sm font-semibold text-blue-700 hover:underline disabled:opacity-50"
-                  >
-                    {spots === 0 ? "Class Full" : "RSVP"}
-                  </button>
-                )}
+                    View details
+                  </Link>
+
+                  {isAdmin ? (
+                    <button
+                      onClick={() => openEdit(c)}
+                      className="text-sm font-semibold text-blue-700 hover:underline"
+                    >
+                      Edit
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => openRsvp(c)}
+                      disabled={spots === 0}
+                      className="text-sm font-semibold text-blue-700 hover:underline disabled:opacity-50"
+                    >
+                      {spots === 0 ? "Class Full" : "RSVP"}
+                    </button>
+                  )}
+                </div>
 
                 {spots !== null && (
                   <div
@@ -227,7 +266,6 @@ const ClassesPage = () => {
         />
       )}
 
-      {/* RSVP modal */}
       {rsvpOpen && selectedClass && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl">
@@ -252,7 +290,7 @@ const ClassesPage = () => {
                 disabled={rsvpLoading || spotsLeft(selectedClass) === 0}
                 className="rounded bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
               >
-                {rsvpLoading ? "Submitting…" : "RSVP"}
+                {rsvpLoading ? "Submitting..." : "RSVP"}
               </button>
             </div>
           </div>

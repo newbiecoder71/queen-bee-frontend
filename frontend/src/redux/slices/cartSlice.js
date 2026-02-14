@@ -19,6 +19,22 @@ const saveCartToStorage = (cart) => {
     localStorage.setItem("cart", JSON.stringify(cart));
 };
 
+const resolveCartIdentity = ({ thunkAPI, userId, guestId }) => {
+    const state = thunkAPI.getState?.() || {};
+    const authUserId = state?.auth?.user?._id;
+    const cartUserId = state?.cart?.cart?.user;
+    const cartGuestId = state?.cart?.cart?.guestId;
+
+    const resolvedUserId =
+      userId || authUserId || cartUserId || localStorage.getItem("userId");
+
+    const resolvedGuestId = resolvedUserId
+      ? undefined
+      : guestId || cartGuestId || localStorage.getItem("guestId");
+
+    return { resolvedUserId, resolvedGuestId };
+};
+
 // Fetch cart for a user or guest
 export const fetchCart = createAsyncThunk(
     "cart/fetchCart",
@@ -40,14 +56,23 @@ export const fetchCart = createAsyncThunk(
 // Add item to cart
 export const addToCart = createAsyncThunk(
     "cart/addToCart",
-    async ({ userId, guestId, productId, quantity }, thunkAPI) => {
+    async ({ userId, guestId, productId, quiltingOrderId, classId, itemType = "product", quantity }, thunkAPI) => {
         try {
+            const { resolvedUserId, resolvedGuestId } = resolveCartIdentity({
+              thunkAPI,
+              userId,
+              guestId,
+            });
+
             const { data } = await axios.post(
                 `${import.meta.env.VITE_BACKEND_URL}/api/carts`, {
+                    itemType,
                     productId,
+                    quiltingOrderId,
+                    classId,
                     quantity,
-                    userId: userId || undefined,
-                    guestId: userId ? undefined : guestId,
+                    userId: resolvedUserId || undefined,
+                    guestId: resolvedGuestId,
                 }
             );
             if (data.guestId) {
@@ -63,17 +88,23 @@ export const addToCart = createAsyncThunk(
 // Update item quantity in cart
 export const updateCartItemQuantity = createAsyncThunk(
     "cart/updateCartItemQuantity",
-    async ({ productId, quantity }, thunkAPI) => {
+    async ({ productId, quiltingOrderId, classId, itemType = "product", quantity, userId: passedUserId, guestId: passedGuestId }, thunkAPI) => {
         try {
-            const userId = localStorage.getItem("userId");
-            const guestId = localStorage.getItem("guestId");
+            const { resolvedUserId, resolvedGuestId } = resolveCartIdentity({
+              thunkAPI,
+              userId: passedUserId,
+              guestId: passedGuestId,
+            });
 
             const { data } = await axios.put(
                 `${import.meta.env.VITE_BACKEND_URL}/api/carts`, {
+                    itemType,
                     productId,
+                    quiltingOrderId,
+                    classId,
                     quantity,
-                    userId: userId || undefined,
-                    guestId: userId ? undefined : guestId,
+                    userId: resolvedUserId || undefined,
+                    guestId: resolvedGuestId,
                 }
             );
             return data;
@@ -86,18 +117,24 @@ export const updateCartItemQuantity = createAsyncThunk(
 // Remove item from cart
 export const removeFromCart = createAsyncThunk(
     "cart/removeFromCart",
-    async ({ productId }, thunkAPI) => {
+    async ({ productId, quiltingOrderId, classId, itemType = "product", userId: passedUserId, guestId: passedGuestId }, thunkAPI) => {
       try {
-        const userId = localStorage.getItem("userId");
-        const guestId = localStorage.getItem("guestId");
+        const { resolvedUserId, resolvedGuestId } = resolveCartIdentity({
+          thunkAPI,
+          userId: passedUserId,
+          guestId: passedGuestId,
+        });
   
         const { data } = await axios.delete(
           `${import.meta.env.VITE_BACKEND_URL}/api/carts`,
           {
             data: {
+              itemType,
               productId,
-              userId: userId || undefined,
-              guestId: userId ? undefined : guestId,
+              quiltingOrderId,
+              classId,
+              userId: resolvedUserId || undefined,
+              guestId: resolvedGuestId,
             },
           }
         );
