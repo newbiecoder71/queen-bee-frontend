@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from "react-redux";
 import MyOrdersPage from "./MyOrdersPage";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { logout } from "../redux/slices/authSlice";
+import { logout, setUserProfile } from "../redux/slices/authSlice";
 import { clearCart } from "../redux/slices/cartSlice";
 import axios from "axios";
 import MyClassesCalendarModal from "../components/Classes/MyClassesCalendarModal";
@@ -14,15 +14,48 @@ import {
   fetchWishlist,
   removeFromWishlist,
 } from "../redux/slices/wishlistSlice";
+import RewardsMedal from "../components/Profile/RewardsMedal";
 
 const API = import.meta.env.VITE_BACKEND_URL;
+const monthOptions = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" },
+];
+const dayOptions = Array.from({ length: 31 }, (_, idx) => idx + 1);
 
 const Profile = () => {
   const { user, token } = useSelector((state) => state.auth);
+  const userId = user?._id;
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [profileForm, setProfileForm] = useState({
+    phone: "",
+    address: {
+      line1: "",
+      line2: "",
+      city: "",
+      state: "",
+      zip: "",
+    },
+    birthdayMonth: "",
+    birthdayDay: "",
+  });
 
   // ✅ My Classes state
   const [myClasses, setMyClasses] = useState([]);
@@ -44,9 +77,44 @@ const Profile = () => {
     }
   }, [user, isLoggingOut, navigate]);
 
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadProfile = async () => {
+      try {
+        setProfileLoading(true);
+        setProfileError("");
+        const authToken = token || localStorage.getItem("userToken");
+        const { data } = await axios.get(`${API}/api/users/profile`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+
+        dispatch(setUserProfile(data));
+        setProfileForm({
+          phone: data?.phone || "",
+          address: {
+            line1: data?.address?.line1 || "",
+            line2: data?.address?.line2 || "",
+            city: data?.address?.city || "",
+            state: data?.address?.state || "",
+            zip: data?.address?.zip || "",
+          },
+          birthdayMonth: data?.birthdayMonth || "",
+          birthdayDay: data?.birthdayDay || "",
+        });
+      } catch (err) {
+        setProfileError(err.response?.data?.message || err.message || "Unable to load profile.");
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [userId, token, dispatch]);
+
   // ✅ Fetch classes user RSVP’d to
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const loadMyClasses = async () => {
       try {
@@ -69,18 +137,52 @@ const Profile = () => {
     };
 
     loadMyClasses();
-  }, [user, token]);
+  }, [userId, token]);
 
   useEffect(() => {
-    if (!user || wishlistLoaded) return;
+    if (!userId || wishlistLoaded) return;
     dispatch(fetchWishlist());
-  }, [dispatch, user, wishlistLoaded]);
+  }, [dispatch, userId, wishlistLoaded]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
     dispatch(logout());
     dispatch(clearCart());
     navigate("/", { replace: true });
+  };
+
+  const handleAddressChange = (field, value) => {
+    setProfileForm((prev) => ({
+      ...prev,
+      address: { ...prev.address, [field]: value },
+    }));
+  };
+
+  const handleProfileSave = async (e) => {
+    e.preventDefault();
+    try {
+      setProfileSaving(true);
+      setProfileError("");
+      setProfileMessage("");
+      const authToken = token || localStorage.getItem("userToken");
+      const payload = {
+        phone: profileForm.phone,
+        address: profileForm.address,
+        birthdayMonth: profileForm.birthdayMonth ? Number(profileForm.birthdayMonth) : null,
+        birthdayDay: profileForm.birthdayDay ? Number(profileForm.birthdayDay) : null,
+      };
+
+      const { data } = await axios.put(`${API}/api/users/profile`, payload, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      dispatch(setUserProfile(data));
+      setProfileMessage("Profile updated.");
+    } catch (err) {
+      setProfileError(err.response?.data?.message || err.message || "Unable to save profile.");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const formatDateTime = (d) => {
@@ -260,9 +362,119 @@ const Profile = () => {
       <div className="flex-grow container mx-auto p-4 md:p-6">
         <div className="flex flex-col md:flex-row md:space-x-6 space-y-6 md:space-y-0">
           {/* Left Section */}
-          <div className="w-full md:w-1/3 lg:w-1/4 shadow-md rounded-lg p-6 bg-white">
+          <div className="w-full md:w-1/3 lg:w-1/4 shadow-md rounded-lg p-6 bg-white space-y-4">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">{user?.name}</h1>
             <p className="text-sm text-gray-600 mb-4">{user?.email}</p>
+            <div className="rounded-lg border bg-white p-3">
+              <div className="text-sm font-bold text-center mb-2">Queen Bee Quilts Rewards Program</div>
+              <RewardsMedal
+                isUnlocked={Number(user?.lifetimeSpend || 0) >= 250}
+                lifetimeSpend={user?.lifetimeSpend || 0}
+                unlockThreshold={250}
+              />
+              <div className="mt-3 text-sm text-center">
+                <div>
+                  Credits Earned:{" "}
+                  <span className="font-semibold">{Number(user?.rewardCredits?.creditsEarned || 0)}</span>
+                </div>
+                <div>
+                  Credits Used:{" "}
+                  <span className="font-semibold">{Number(user?.rewardCredits?.creditsUsed || 0)}</span>
+                </div>
+                <div>
+                  Credits Available:{" "}
+                  <span className="font-semibold">{Number(user?.rewardCredits?.creditsAvailable || 0)}</span>
+                </div>
+                <div className="mt-1 font-semibold text-green-700">
+                  Available Value: ${Number(user?.rewardCredits?.availableAmount || 0).toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleProfileSave} className="rounded-lg border bg-white p-3 space-y-2">
+              <div className="text-sm font-bold">Profile Details</div>
+              {profileLoading && <div className="text-xs text-gray-600">Loading profile...</div>}
+              {profileError && <div className="text-xs text-red-600">{profileError}</div>}
+              {profileMessage && <div className="text-xs text-green-700">{profileMessage}</div>}
+
+              <input
+                className="w-full rounded border p-2 text-sm"
+                placeholder="Phone (optional)"
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
+              />
+              <input
+                className="w-full rounded border p-2 text-sm"
+                placeholder="Address line 1 (optional)"
+                value={profileForm.address.line1}
+                onChange={(e) => handleAddressChange("line1", e.target.value)}
+              />
+              <input
+                className="w-full rounded border p-2 text-sm"
+                placeholder="Address line 2 (optional)"
+                value={profileForm.address.line2}
+                onChange={(e) => handleAddressChange("line2", e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className="w-full rounded border p-2 text-sm"
+                  placeholder="City"
+                  value={profileForm.address.city}
+                  onChange={(e) => handleAddressChange("city", e.target.value)}
+                />
+                <input
+                  className="w-full rounded border p-2 text-sm"
+                  placeholder="State"
+                  value={profileForm.address.state}
+                  onChange={(e) => handleAddressChange("state", e.target.value)}
+                />
+              </div>
+              <input
+                className="w-full rounded border p-2 text-sm"
+                placeholder="ZIP"
+                value={profileForm.address.zip}
+                onChange={(e) => handleAddressChange("zip", e.target.value)}
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  className="w-full rounded border p-2 text-sm bg-white"
+                  value={profileForm.birthdayMonth}
+                  onChange={(e) =>
+                    setProfileForm((prev) => ({ ...prev, birthdayMonth: e.target.value }))
+                  }
+                >
+                  <option value="">Birth Month</option>
+                  {monthOptions.map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="w-full rounded border p-2 text-sm bg-white"
+                  value={profileForm.birthdayDay}
+                  onChange={(e) =>
+                    setProfileForm((prev) => ({ ...prev, birthdayDay: e.target.value }))
+                  }
+                >
+                  <option value="">Birth Day</option>
+                  {dayOptions.map((day) => (
+                    <option key={day} value={day}>
+                      {day}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                disabled={profileSaving}
+                className="w-full rounded bg-black text-white py-2 text-sm font-semibold hover:bg-gray-800 disabled:opacity-60"
+              >
+                {profileSaving ? "Saving..." : "Save Profile"}
+              </button>
+            </form>
 
             <button
               onClick={handleLogout}

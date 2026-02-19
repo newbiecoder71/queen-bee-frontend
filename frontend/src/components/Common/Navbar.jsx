@@ -89,6 +89,7 @@ const Navbar = () => {
   const mainLinks = [
     { label: "Classes", to: "/classes" },
     { label: "Services", to: "/services" },
+    { label: "Rewards", to: "/rewards-program" },
     { label: "About Us", to: "/about" },
     { label: "Contact Us", to: "/contact" },
   ];

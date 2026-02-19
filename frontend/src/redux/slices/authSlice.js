@@ -121,6 +121,7 @@ const authSlice = createSlice({
       localStorage.removeItem("userInfo");
       localStorage.removeItem("userId");
       localStorage.removeItem("userToken");
+      localStorage.removeItem("posActiveEmployeeContext");
 
       // Create new guest ID
       state.guestId = `guest_${new Date().getTime()}`;
@@ -134,6 +135,14 @@ const authSlice = createSlice({
 
     clearError: (state) => {
       state.error = null;
+    },
+
+    setUserProfile: (state, action) => {
+      state.user = action.payload;
+      localStorage.setItem("userInfo", JSON.stringify(action.payload));
+      if (action.payload?._id) {
+        localStorage.setItem("userId", action.payload._id);
+      }
     },
   },
 
@@ -212,6 +221,7 @@ export const {
   logout,
   generateNewGuestId,
   clearError,
+  setUserProfile,
 } = authSlice.actions;
 
 export default authSlice.reducer;

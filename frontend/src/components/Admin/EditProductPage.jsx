@@ -36,7 +36,14 @@ const EditProductPage = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/products/${id}`);
+        const res = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/admin/products/${id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+            },
+          }
+        );
         setProductData({
           name: res.data.name || "",
           description: res.data.description || "",

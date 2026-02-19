@@ -38,6 +38,18 @@ const MyQuiltsDetailsPage = () => {
   if (error) return <p className="text-red-500">Error: {error}</p>;
   if (!quiltingOrder) return <p>No quilting order found</p>;
 
+  const storedTotal = Number(quiltingOrder.totalPrice || 0);
+  const squareInches = Number(quiltingOrder.squareInches || 0);
+  const derivedSquareInches =
+    squareInches > 0
+      ? squareInches
+      : Number(quiltingOrder.widthInches || 0) * Number(quiltingOrder.heightInches || 0);
+  const derivedTotal =
+    derivedSquareInches > 0
+      ? derivedSquareInches * 0.0125 + (quiltingOrder.backingPrep ? 10 : 0)
+      : 0;
+  const finalTotal = storedTotal > 0 ? storedTotal : derivedTotal;
+
   const handleAddToCart = async () => {
     try {
       const userId = user?._id || localStorage.getItem("userId");
@@ -100,10 +112,8 @@ const MyQuiltsDetailsPage = () => {
           </p>
           <p>
             <span className="font-semibold">Price:</span>{" "}
-            {typeof quiltingOrder.totalPrice === "number"
-              ? `$${quiltingOrder.totalPrice.toFixed(2)}`
-              : quiltingOrder.squareInches
-              ? `$${(quiltingOrder.squareInches * 0.0125).toFixed(2)}`
+            {finalTotal > 0
+              ? `$${finalTotal.toFixed(2)}`
               : "N/A"}
           </p>
           <p>

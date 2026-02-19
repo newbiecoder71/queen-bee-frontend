@@ -87,7 +87,7 @@ const ProductForm = ({
             />
           </div>
           <div>
-            <label className="block font-semibold mb-2">Discount Price</label>
+            <label className="block font-semibold mb-2">On Sale Price</label>
             <input
               type="number"
               name="discountPrice"
@@ -95,6 +95,9 @@ const ProductForm = ({
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md p-2"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Leave blank or 0 for no sale. Must be lower than regular price.
+            </p>
           </div>
           <div>
             <label className="block font-semibold mb-2">Count In Stock</label>

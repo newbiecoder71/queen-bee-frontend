@@ -22,6 +22,13 @@ const ProductGrid = ({ products, loading, error }) => {
     }, [dispatch, user, hasLoaded]);
 
     const wishlistIds = new Set(wishlistItems.map((item) => item._id));
+    const shouldContainImage = (name = "") => /baby\s*elegan/i.test(String(name));
+    const getSaleInfo = (product) => {
+        const regular = Number(product?.price || 0);
+        const sale = Number(product?.discountPrice || 0);
+        const onSale = Number.isFinite(sale) && sale > 0 && sale < regular;
+        return { regular, sale, onSale };
+    };
 
     const handleWishlistClick = async (e, productId, isWishlisted) => {
         e.preventDefault();
@@ -56,6 +63,11 @@ const ProductGrid = ({ products, loading, error }) => {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {products.map((product) => (
             <div key={product._id} className="relative">
+                {getSaleInfo(product).onSale && (
+                    <div className="absolute left-3 top-3 z-10 rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">
+                        On Sale
+                    </div>
+                )}
                 <button
                     type="button"
                     onClick={(e) =>
@@ -77,7 +89,11 @@ const ProductGrid = ({ products, loading, error }) => {
                             <img
                                 src={product.images[0].url}
                                 alt={product.images[0].altText || product.name}
-                                className="w-full h-full object-cover rounded-lg"
+                                className={`w-full h-full rounded-lg ${
+                                  shouldContainImage(product.name)
+                                    ? "object-contain bg-white"
+                                    : "object-cover"
+                                }`}
                             />
                         ) : (
                         <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-500">
@@ -87,9 +103,18 @@ const ProductGrid = ({ products, loading, error }) => {
 
                     </div>
                     <h3 className="text-sm mb-2">{product.name}</h3>
-                    <p className="text-gray-500 font-medium text-sm tracking-tighter">
-                        $ {product.price}
-                    </p>
+                    {(() => {
+                        const { regular, sale, onSale } = getSaleInfo(product);
+                        if (onSale) {
+                            return (
+                                <div className="text-sm tracking-tight">
+                                    <p className="text-gray-400 line-through">${regular.toFixed(2)}</p>
+                                    <p className="font-semibold text-red-600">On Sale ${sale.toFixed(2)}</p>
+                                </div>
+                            );
+                        }
+                        return <p className="text-gray-500 font-medium">${regular.toFixed(2)}</p>;
+                    })()}
                 </div>
                 </Link>
             </div>

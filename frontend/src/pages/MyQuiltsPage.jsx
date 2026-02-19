@@ -70,12 +70,18 @@ const MyQuiltsPage = () => {
             <tbody>
               {quiltingOrders.length > 0 ? (
                 quiltingOrders.map((quiltingOrder) => {
-                  const price =
-                    typeof quiltingOrder.totalPrice === "number"
-                      ? quiltingOrder.totalPrice.toFixed(2)
-                      : quiltingOrder.squareInches
-                      ? (quiltingOrder.squareInches * 0.0125).toFixed(2)
-                      : "N/A";
+                  const storedTotal = Number(quiltingOrder.totalPrice || 0);
+                  const squareInches = Number(quiltingOrder.squareInches || 0);
+                  const derivedSquareInches =
+                    squareInches > 0
+                      ? squareInches
+                      : Number(quiltingOrder.widthInches || 0) * Number(quiltingOrder.heightInches || 0);
+                  const derivedTotal =
+                    derivedSquareInches > 0
+                      ? derivedSquareInches * 0.0125 + (quiltingOrder.backingPrep ? 10 : 0)
+                      : 0;
+                  const finalTotal = storedTotal > 0 ? storedTotal : derivedTotal;
+                  const price = finalTotal > 0 ? finalTotal.toFixed(2) : "N/A";
 
                   return (
                     <tr

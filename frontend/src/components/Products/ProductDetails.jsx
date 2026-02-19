@@ -23,6 +23,13 @@ const ProductDetails = ({ productId }) => {
   const [mainImage, setMainImage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const shouldContainImage = (name = "") => /baby\s*elegan/i.test(String(name));
+  const getSaleInfo = (product) => {
+    const regular = Number(product?.price || 0);
+    const sale = Number(product?.discountPrice || 0);
+    const onSale = Number.isFinite(sale) && sale > 0 && sale < regular;
+    return { regular, sale, onSale };
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -47,6 +54,8 @@ const ProductDetails = ({ productId }) => {
 
   const handleAddToCart = () => {
     setIsButtonDisabled(true);
+    const { regular, sale, onSale } = getSaleInfo(selectedProduct);
+    const effectivePrice = onSale ? sale : regular;
 
     const userId = localStorage.getItem("userId");
     const guestId = localStorage.getItem("guestId");
@@ -56,7 +65,7 @@ const ProductDetails = ({ productId }) => {
         productId: id,
         name: selectedProduct.name,
         image: selectedProduct.images[0]?.url,
-        price: selectedProduct.price,
+        price: effectivePrice,
         quantity,
         userId: userId || undefined,
         guestId: userId ? undefined : guestId,
@@ -118,7 +127,13 @@ const ProductDetails = ({ productId }) => {
 
             <div className="md:w-1/2">
               <div className="mb-4">
-                <img src={mainImage} alt="Main Product" className="w-full h-auto object-cover rounded-lg" />
+                <img
+                  src={mainImage}
+                  alt="Main Product"
+                  className={`w-full h-auto rounded-lg ${
+                    shouldContainImage(selectedProduct?.name) ? "object-contain bg-white" : "object-cover"
+                  }`}
+                />
               </div>
             </div>
 
@@ -137,10 +152,18 @@ const ProductDetails = ({ productId }) => {
             <div className="md:w-1/2 md:ml-10">
               <h1 className="text-2xl md:text-3xl font-semibold mb-2">{selectedProduct.name}</h1>
 
-              <p className="text-lg text-gray-600 mb-1 line-through">
-                {selectedProduct.originalPrice && `${selectedProduct.originalPrice}`}
-              </p>
-              <p className="text-xl text-gray-500 mb-2">$ {selectedProduct.price}</p>
+              {(() => {
+                const { regular, sale, onSale } = getSaleInfo(selectedProduct);
+                if (onSale) {
+                  return (
+                    <>
+                      <p className="text-lg text-gray-600 mb-1 line-through">${regular.toFixed(2)}</p>
+                      <p className="text-2xl text-red-600 font-semibold mb-2">On Sale ${sale.toFixed(2)}</p>
+                    </>
+                  );
+                }
+                return <p className="text-xl text-gray-500 mb-2">${regular.toFixed(2)}</p>;
+              })()}
               <p className="text-gray-600 mb-4">{selectedProduct.description}</p>
 
               <div className="mb-6">

@@ -27,6 +27,7 @@ const UserManagement = () => {
         email: "",
         password: "",
         role: "customer", // Default role
+        adminNotes: "",
     });
 
     const [editingUserId, setEditingUserId] = useState(null);
@@ -48,6 +49,7 @@ const UserManagement = () => {
                 name: formData.name,
                 email: formData.email,
                 role: formData.role,
+                adminNotes: formData.adminNotes,
                 password: formData.password, // include if set
             };
     
@@ -68,6 +70,7 @@ const UserManagement = () => {
             email: "",
             password: "",
             role: "customer",
+            adminNotes: "",
         });
         setEditingUserId(null);
     };
@@ -90,6 +93,7 @@ const UserManagement = () => {
           email: user.email,
           password: "", // optional: leave blank for security
           role: user.role,
+          adminNotes: user.adminNotes || "",
         });
         setEditingUserId(user._id);
     };
@@ -100,6 +104,7 @@ const UserManagement = () => {
           email: "",
           password: "",
           role: "customer",
+          adminNotes: "",
         });
         setEditingUserId(null); // Exit edit mode
       };
@@ -129,8 +134,19 @@ const UserManagement = () => {
                         <label className="block text-gray-700">Role</label>
                         <select name="role" value={formData.role} onChange={handleChange} className="w-full p-2 border rounded">
                             <option value="customer">Customer</option>
+                            <option value="employee">Employee</option>
                             <option value="admin">Admin</option>
                         </select>
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-gray-700">Admin Notes</label>
+                        <textarea
+                          name="adminNotes"
+                          value={formData.adminNotes}
+                          onChange={handleChange}
+                          className="w-full p-2 border rounded h-24"
+                          placeholder="Private notes visible to admins only"
+                        />
                     </div>
                     <div className="flex gap-2">
                         <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
@@ -153,6 +169,7 @@ const UserManagement = () => {
                             <th className="py-3 px-4">Name</th>
                             <th className="py-3 px-4">Email</th>
                             <th className="py-3 px-4">Role</th>
+                            <th className="py-3 px-4">Admin Notes</th>
                             <th className="py-3 px-4">Actions</th>
                         </tr>
                     </thead>
@@ -166,8 +183,14 @@ const UserManagement = () => {
                                 <td className="p-4">
                                     <select value={user.role} onChange={(e) => handleRoleChange(user._id, e.target.value)} className="p-2 border rounded">
                                         <option value="customer">Customer</option>
+                                        <option value="employee">Employee</option>
                                         <option value="admin">Admin</option>
                                     </select>
+                                </td>
+                                <td className="p-4 max-w-xs">
+                                    <div className="line-clamp-3 whitespace-pre-wrap text-sm text-gray-700">
+                                        {user.adminNotes || "-"}
+                                    </div>
                                 </td>
                                 <td className="p-4 flex gap-2">
                                     <button

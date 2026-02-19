@@ -44,15 +44,24 @@ export const addUser = createAsyncThunk(
 // Update user information
 export const updateUser = createAsyncThunk(
     'admin/updateUser',
-    async ({ id, name, email, role, password }, { rejectWithValue }) => {
+    async ({ id, name, email, role, password, adminNotes, employeeRole, employeePermissions }, { rejectWithValue }) => {
         try {
             const body = { name, email, role };
             if (password && password.trim() !== "") {
                 body.password = password;
             }
+            if (adminNotes !== undefined) {
+                body.adminNotes = adminNotes;
+            }
+            if (employeeRole !== undefined) {
+                body.employeeRole = employeeRole;
+            }
+            if (employeePermissions !== undefined) {
+                body.employeePermissions = employeePermissions;
+            }
             const response = await axios.put(
                 `${import.meta.env.VITE_BACKEND_URL}/api/users/admin/users/${id}`,
-                { name, email, role },
+                body,
                 {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('userToken')}`
