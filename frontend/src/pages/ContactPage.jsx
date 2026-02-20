@@ -4,6 +4,16 @@ import axios from "axios";
 
 const API = import.meta.env.VITE_BACKEND_URL;
 
+const getNameParts = (fullName = "") => {
+  const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" "),
+  };
+};
+
 const ContactPage = () => {
   const [status, setStatus] = useState("idle");
   useEffect(() => {
@@ -14,16 +24,28 @@ const ContactPage = () => {
 
   const { user } = useSelector((state) => state.auth);
   const firstName = user?.name ? user.name.trim().split(/\s+/)[0] : null;
+  const userNameParts = getNameParts(user?.name || "");
+  const userEmail = String(user?.email || "").trim();
 
   // ✅ Controlled form state (so we can POST it)
   const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
+    firstName: userNameParts.firstName,
+    lastName: userNameParts.lastName,
+    email: userEmail,
     topic: "",
     message: "",
     honey: "", // honeypot (hidden)
   });
+
+  useEffect(() => {
+    if (!user) return;
+    setForm((prev) => ({
+      ...prev,
+      firstName: userNameParts.firstName,
+      lastName: userNameParts.lastName,
+      email: userEmail,
+    }));
+  }, [user, userEmail, userNameParts.firstName, userNameParts.lastName]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,9 +69,9 @@ const ContactPage = () => {
 
       // reset inputs
       setForm({
-        firstName: "",
-        lastName: "",
-        email: "",
+        firstName: userNameParts.firstName,
+        lastName: userNameParts.lastName,
+        email: userEmail,
         topic: "",
         message: "",
         honey: "",

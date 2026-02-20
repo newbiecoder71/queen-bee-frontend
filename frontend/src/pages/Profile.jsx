@@ -36,6 +36,7 @@ const dayOptions = Array.from({ length: 31 }, (_, idx) => idx + 1);
 const Profile = () => {
   const { user, token } = useSelector((state) => state.auth);
   const userId = user?._id;
+  const showRewardsSection = user?.role !== "admin";
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -365,31 +366,33 @@ const Profile = () => {
           <div className="w-full md:w-1/3 lg:w-1/4 shadow-md rounded-lg p-6 bg-white space-y-4">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">{user?.name}</h1>
             <p className="text-sm text-gray-600 mb-4">{user?.email}</p>
-            <div className="rounded-lg border bg-white p-3">
-              <div className="text-sm font-bold text-center mb-2">Queen Bee Quilts Rewards Program</div>
-              <RewardsMedal
-                isUnlocked={Number(user?.lifetimeSpend || 0) >= 250}
-                lifetimeSpend={user?.lifetimeSpend || 0}
-                unlockThreshold={250}
-              />
-              <div className="mt-3 text-sm text-center">
-                <div>
-                  Credits Earned:{" "}
-                  <span className="font-semibold">{Number(user?.rewardCredits?.creditsEarned || 0)}</span>
-                </div>
-                <div>
-                  Credits Used:{" "}
-                  <span className="font-semibold">{Number(user?.rewardCredits?.creditsUsed || 0)}</span>
-                </div>
-                <div>
-                  Credits Available:{" "}
-                  <span className="font-semibold">{Number(user?.rewardCredits?.creditsAvailable || 0)}</span>
-                </div>
-                <div className="mt-1 font-semibold text-green-700">
-                  Available Value: ${Number(user?.rewardCredits?.availableAmount || 0).toFixed(2)}
+            {showRewardsSection && (
+              <div className="rounded-lg border bg-white p-3">
+                <div className="text-sm font-bold text-center mb-2">Queen Bee Quilts Rewards Program</div>
+                <RewardsMedal
+                  isUnlocked={Number(user?.lifetimeSpend || 0) >= 250}
+                  lifetimeSpend={user?.lifetimeSpend || 0}
+                  unlockThreshold={250}
+                />
+                <div className="mt-3 text-sm text-center">
+                  <div>
+                    Credits Earned:{" "}
+                    <span className="font-semibold">{Number(user?.rewardCredits?.creditsEarned || 0)}</span>
+                  </div>
+                  <div>
+                    Credits Used:{" "}
+                    <span className="font-semibold">{Number(user?.rewardCredits?.creditsUsed || 0)}</span>
+                  </div>
+                  <div>
+                    Credits Available:{" "}
+                    <span className="font-semibold">{Number(user?.rewardCredits?.creditsAvailable || 0)}</span>
+                  </div>
+                  <div className="mt-1 font-semibold text-green-700">
+                    Available Value: ${Number(user?.rewardCredits?.availableAmount || 0).toFixed(2)}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <form onSubmit={handleProfileSave} className="rounded-lg border bg-white p-3 space-y-2">
               <div className="text-sm font-bold">Profile Details</div>

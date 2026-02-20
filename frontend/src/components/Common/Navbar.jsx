@@ -101,16 +101,16 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="container mx-auto flex items-center justify-between py-4 px-6">
+      <nav className="container mx-auto flex items-center justify-between gap-3 py-4 px-4 sm:px-6">
         {/* Left - Logo */}
-        <div>
-          <Link to="/" className="text-2xl font-medium">
+        <div className="min-w-0 flex-shrink">
+          <Link to="/" className="block truncate text-xl font-medium sm:text-2xl">
             Queen Bee Quilts
           </Link>
         </div>
 
         {/* Center Navigation (Desktop) */}
-        <div className="hidden md:flex items-center space-x-6">
+        <div className="hidden xl:flex items-center space-x-5">
           {/* SHOP DROPDOWN */}
           <div
             className="relative"
@@ -174,7 +174,7 @@ const Navbar = () => {
         </div>
 
         {/* Right Icons */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-3 xl:space-x-4">
           {user && user.role === "admin" && (
             <Link
               to="/admin"
@@ -185,8 +185,8 @@ const Navbar = () => {
           )}
 
             {/* ✅ Inline Search (Desktop) */}
-            <div className="hidden sm:flex items-center">
-              <div className="relative flex-shrink w-40 sm:w-48 md:w-56 lg:w-64">
+            <div className="hidden xl:flex items-center">
+              <div className="relative w-56 2xl:w-64">
                 <input
                   ref={navSearchRef}
                   className="w-full rounded border px-3 py-2 pr-9 text-sm"
@@ -227,7 +227,7 @@ const Navbar = () => {
                 // optional: close menu if open
                 // setNavDrawerOpen(false);
               }}
-              className="sm:hidden hover:text-black"
+              className="xl:hidden hover:text-black"
               aria-label="Search"
             >
               <HiMagnifyingGlass className="h-7 w-7 text-gray-700" />
@@ -269,7 +269,7 @@ const Navbar = () => {
           </button>
 
           {/* Mobile Menu */}
-          <button onClick={toggleNavDrawer} className="md:hidden">
+          <button onClick={toggleNavDrawer} className="xl:hidden">
             <HiBars3BottomRight className="h-6 w-6 text-gray-700" />
           </button>
         </div>
@@ -278,7 +278,7 @@ const Navbar = () => {
       {/* ✅ Mobile Search Panel (animated) */}
       {mobileSearchMounted && (
         <div
-          className={`sm:hidden overflow-hidden border-t bg-white px-4 transition-all duration-200 ease-out
+          className={`xl:hidden overflow-hidden border-t bg-white px-4 transition-all duration-200 ease-out
             ${mobileSearchOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}
         >
           <div

@@ -105,14 +105,16 @@ const NewArrivals = () => {
                         On Sale
                       </div>
                     )}
-                    <img
-                      src={product.images[0]?.url}
-                      alt={product.images[0]?.altText || product.name}
-                      className={`w-full h-[500px] rounded-lg ${
-                        shouldContainImage(product.name) ? "object-contain bg-white" : "object-cover"
-                      }`}
-                      draggable="false"
-                    />
+                    <Link to={`/product/${product._id}`} className="block">
+                      <img
+                        src={product.images[0]?.url}
+                        alt={product.images[0]?.altText || product.name}
+                        className={`w-full h-[500px] rounded-lg ${
+                          shouldContainImage(product.name) ? "object-contain bg-white" : "object-cover"
+                        }`}
+                        draggable="false"
+                      />
+                    </Link>
                     <div className="absolute bottom-0 left-0 right-0 bg-opacity-50 backdrop-blur-md text-white p-4 rounded-b-lg">
                         <Link to={`/product/${product._id}`} className="block">
                             <h4 className="font-medium">{product.name}</h4>
