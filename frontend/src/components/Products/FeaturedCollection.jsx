@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import featured from "../../assets/featured.webp";
+const featured = "/images/IMG_2341.jpg";
 
 const FeaturedCollection = () => {
   return (
