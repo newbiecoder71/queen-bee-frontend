@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_BACKEND_URL;
 const POS_ACTIVE_SESSION_KEY = "posActiveSessionId";
 const POS_ACTIVE_EMPLOYEE_CONTEXT_KEY = "posActiveEmployeeContext";
 const EMPTY_REGISTER_MESSAGE = "Register is empty. Add an item before suspending.";
 const REWARD_SPEND_STEP = 250;
+const AUTO_SEARCH_MIN_CHARS = 1;
+const AUTO_SEARCH_DEBOUNCE_MS = 250;
 const MANAGER_DEFAULT_PERMISSIONS = [
   "pos.access",
   "timeclock.access",
@@ -81,6 +84,33 @@ const CODE39_PATTERNS = {
 };
 
 const toCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
+const normalizeQty3 = (value) => Math.round(Number(value || 0) * 1000) / 1000;
+const formatQty3 = (value) => normalizeQty3(value).toFixed(3);
+const canRunCustomerLookup = (query = "") => {
+  const q = String(query || "").trim();
+  if (!q) return false;
+  // Numeric search is treated as last 4 phone lookup.
+  if (/^\d+$/.test(q)) return q.length >= 4;
+  return q.length >= AUTO_SEARCH_MIN_CHARS;
+};
+const getRegisterDisplayName = (item) => {
+  const rawName = String(item?.name || "").trim();
+  const sku = String(item?.sku || "").trim();
+  const isModaFabric =
+    String(item?.category || "").trim().toLowerCase().includes("fabric") &&
+    /moda/i.test(rawName);
+
+  if (!isModaFabric) return rawName;
+
+  // Keep only the title part for Moda fabrics and append SKU for easier scanning.
+  const titleOnly = rawName.split(/\s+by\s+/i)[0].trim() || rawName;
+  return sku ? `${titleOnly} | SKU: ${sku}` : titleOnly;
+};
+const isFabricItem = (item) => {
+  const category = String(item?.category || "").trim().toLowerCase();
+  if (category.includes("fabric")) return true;
+  return String(item?.name || "").trim().toLowerCase().includes("fabric");
+};
 
 const calculateLineDiscountSavings = (item) => {
   const unitPrice = Number(item?.price || 0);
@@ -300,6 +330,7 @@ const RewardSeal = ({ unlocked = false }) => {
 };
 
 const PosManagement = () => {
+  const navigate = useNavigate();
   const resolveImage = (url) => {
     if (!url) return "";
     if (url.startsWith("/uploads")) return `${API}${url}`;
@@ -320,6 +351,7 @@ const PosManagement = () => {
   const [productResults, setProductResults] = useState([]);
   const [lineDiscountInputs, setLineDiscountInputs] = useState({});
   const [miscLineInputs, setMiscLineInputs] = useState({});
+  const [fabricQtyInputs, setFabricQtyInputs] = useState({});
 
   const [customerQ, setCustomerQ] = useState("");
   const [customerResults, setCustomerResults] = useState([]);
@@ -719,9 +751,9 @@ const PosManagement = () => {
     }
   };
 
-  const searchProducts = async () => {
-    const term = searchTerm.trim();
-    if (!term) {
+  const searchProducts = async (overrideTerm = "") => {
+    const term = String(overrideTerm || searchTerm).trim();
+    if (term.length < AUTO_SEARCH_MIN_CHARS) {
       setProductResults([]);
       return;
     }
@@ -787,13 +819,37 @@ const PosManagement = () => {
     if (!requireActiveEmployee()) return;
     if (!selectedSessionId) return;
     try {
+      const parsedQty = Number(qty);
+      if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
+        setError("Quantity must be greater than 0.");
+        return;
+      }
       await api.put(`/api/admin/pos/sessions/${selectedSessionId}/items/${productId}`, {
-        quantity: Math.max(1, Number(qty || 1)),
+        quantity: normalizeQty3(parsedQty),
       });
       await loadSessionById(selectedSessionId);
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Error updating quantity");
     }
+  };
+
+  const commitFabricQty = async (productId, rawValue) => {
+    const parsedQty = Number(rawValue);
+    if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
+      setError("Fabric quantity must be greater than 0.");
+      setFabricQtyInputs((prev) => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+      return;
+    }
+    await updateItemQty(productId, normalizeQty3(parsedQty));
+    setFabricQtyInputs((prev) => {
+      const next = { ...prev };
+      delete next[productId];
+      return next;
+    });
   };
 
   const updateItemDiscount = async (productId, discountPercent) => {
@@ -857,9 +913,9 @@ const PosManagement = () => {
     }
   };
 
-  const searchCustomers = async () => {
-    const q = customerQ.trim();
-    if (q.length < 2) {
+  const searchCustomers = async (overrideQuery = "") => {
+    const q = String(overrideQuery || customerQ).trim();
+    if (!canRunCustomerLookup(q)) {
       setCustomerResults([]);
       setCustomerSearchAttempted(false);
       return;
@@ -882,6 +938,31 @@ const PosManagement = () => {
     setCustomerResults([]);
     setCustomerSearchAttempted(false);
   };
+
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (term.length < AUTO_SEARCH_MIN_CHARS) {
+      setProductResults([]);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      searchProducts(term);
+    }, AUTO_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const q = customerQ.trim();
+    if (!canRunCustomerLookup(q)) {
+      setCustomerResults([]);
+      setCustomerSearchAttempted(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      searchCustomers(q);
+    }, AUTO_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [customerQ]);
 
   const openCreateCustomerModal = () => {
     setCustomerFormMode("create");
@@ -1190,7 +1271,7 @@ const PosManagement = () => {
             className="rounded border border-red-300 px-2 py-0.5 text-xs font-semibold hover:bg-red-100"
             aria-label="Close message"
           >
-            X
+            x
           </button>
         </div>
       )}
@@ -1225,7 +1306,7 @@ const PosManagement = () => {
               className="text-xs leading-none rounded border px-2 py-1 hover:bg-gray-50"
               aria-label="Close suspended list"
             >
-              X
+              x
             </button>
           </div>
 
@@ -1259,7 +1340,7 @@ const PosManagement = () => {
                       aria-label="Delete suspended cart"
                       title="Delete suspended cart"
                     >
-                      X
+                      x
                     </button>
                   </div>
                 </li>
@@ -1338,7 +1419,7 @@ const PosManagement = () => {
                   <div className="relative w-full">
                     <input
                       className="w-full rounded border p-2 pr-9 text-sm bg-white"
-                      placeholder="Search customer..."
+                      placeholder="Search customers..."
                       value={customerQ}
                       onChange={(e) => {
                         setCustomerQ(e.target.value);
@@ -1353,7 +1434,7 @@ const PosManagement = () => {
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
                         aria-label="Clear customer search"
                       >
-                        X
+                        {"\u2715"}
                       </button>
                     )}
                   </div>
@@ -1407,7 +1488,7 @@ const PosManagement = () => {
               ))}
               {customerSearchAttempted &&
                 !searchingCustomers &&
-                customerQ.trim().length >= 2 &&
+                customerQ.trim().length >= AUTO_SEARCH_MIN_CHARS &&
                 customerResults.length === 0 && (
                 <div className="rounded border border-amber-200 bg-amber-50 p-2 text-sm text-amber-800">
                   No results found.
@@ -1417,34 +1498,45 @@ const PosManagement = () => {
           </div>
 
           <div>
-            <h2 className="font-semibold mb-2">Add Products</h2>
-            <div className="flex gap-2">
-              <div className="relative w-full">
-                <input
-                  className="w-full rounded border p-2 pr-9"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && searchProducts()}
-                  placeholder="Search products..."
-                />
-                {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={clearProductSearch}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
-                    aria-label="Clear product search"
-                  >
-                    X
-                  </button>
-                )}
-              </div>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="font-semibold">Products</h2>
               <button
                 type="button"
-                onClick={searchProducts}
-                className="rounded bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                onClick={() => navigate("/admin/products/add")}
+                className="rounded border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold hover:bg-gray-50"
               >
-                {searchingProducts ? "..." : "Search"}
+                Add Product
               </button>
+            </div>
+            <div className="rounded border bg-gray-50 p-2 text-sm">
+              <div className="flex gap-2">
+                <div className="relative w-full">
+                  <input
+                    className="w-full rounded border p-2 pr-5 text-sm bg-white"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && searchProducts()}
+                    placeholder="Search products..."
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={clearProductSearch}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+                      aria-label="Clear product search"
+                    >
+                      {"\u2715"}
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={searchProducts}
+                  className="rounded bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                >
+                  {searchingProducts ? "..." : "Search"}
+                </button>
+              </div>
             </div>
             <div className="mt-2 space-y-1 max-h-80 overflow-auto">
               {productResults.map((p) => (
@@ -1581,7 +1673,7 @@ const PosManagement = () => {
                                 />
                               ) : (
                                 <div className="min-w-0">
-                                  <div className="truncate">{item.name}</div>
+                                  <div className="truncate">{getRegisterDisplayName(item)}</div>
                                   {Number(item.originalPrice || 0) > Number(item.price || 0) && (
                                     <div className="text-[11px] leading-tight">
                                       <span className="text-gray-400 line-through">
@@ -1595,23 +1687,65 @@ const PosManagement = () => {
                             </div>
                           </td>
                           <td className="px-3 py-2">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                type="button"
-                                className="rounded border px-2"
-                                onClick={() => updateItemQty(item.productId, Number(item.quantity) - 1)}
-                              >
-                                -
-                              </button>
-                              <span>{item.quantity}</span>
-                              <button
-                                type="button"
-                                className="rounded border px-2"
-                                onClick={() => updateItemQty(item.productId, Number(item.quantity) + 1)}
-                              >
-                                +
-                              </button>
-                            </div>
+                            {item.lineType !== "misc" && isFabricItem(item) ? (
+                              <input
+                                type="number"
+                                min="0.001"
+                                step="0.125"
+                                className="w-16 rounded border p-1 text-right text-xs"
+                                value={
+                                  Object.prototype.hasOwnProperty.call(fabricQtyInputs, item.productId)
+                                    ? fabricQtyInputs[item.productId]
+                                    : formatQty3(item.quantity)
+                                }
+                                onChange={(e) =>
+                                  setFabricQtyInputs((prev) => ({
+                                    ...prev,
+                                    [item.productId]: e.target.value,
+                                  }))
+                                }
+                                onBlur={() => {
+                                  const raw = Object.prototype.hasOwnProperty.call(
+                                    fabricQtyInputs,
+                                    item.productId
+                                  )
+                                    ? fabricQtyInputs[item.productId]
+                                    : item.quantity;
+                                  commitFabricQty(item.productId, raw);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key !== "Enter") return;
+                                  e.preventDefault();
+                                  const raw = Object.prototype.hasOwnProperty.call(
+                                    fabricQtyInputs,
+                                    item.productId
+                                  )
+                                    ? fabricQtyInputs[item.productId]
+                                    : item.quantity;
+                                  commitFabricQty(item.productId, raw);
+                                }}
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  type="button"
+                                  className="rounded border px-2"
+                                  onClick={() =>
+                                    updateItemQty(item.productId, Math.max(1, Number(item.quantity) - 1))
+                                  }
+                                >
+                                  -
+                                </button>
+                                <span>{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  className="rounded border px-2"
+                                  onClick={() => updateItemQty(item.productId, Number(item.quantity) + 1)}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right">
                             {item.lineType === "misc" ? (
@@ -1726,7 +1860,7 @@ const PosManagement = () => {
                               className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300 bg-white text-red-600 text-xl font-bold leading-none shadow-[0_2px_0_rgba(185,28,28,0.35),0_4px_10px_rgba(239,68,68,0.18)] transition-all duration-150 hover:bg-red-600 hover:text-white hover:border-red-700 hover:shadow-[0_1px_0_rgba(127,29,29,0.45),0_3px_8px_rgba(127,29,29,0.35)] active:translate-y-px active:shadow-[0_1px_0_rgba(127,29,29,0.45)]"
                               aria-label={`Remove ${item.name}`}
                             >
-                              X
+                              x
                             </button>
                           </td>
                         </tr>
@@ -2118,7 +2252,7 @@ const PosManagement = () => {
                 onClick={() => setShowCustomerNotes(false)}
                 className="text-xs rounded border px-2 py-1 hover:bg-gray-50"
               >
-                X
+                x
               </button>
             </div>
             <textarea
@@ -2160,7 +2294,7 @@ const PosManagement = () => {
                 onClick={() => setShowCustomerFormModal(false)}
                 className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
               >
-                X
+                x
               </button>
             </div>
 

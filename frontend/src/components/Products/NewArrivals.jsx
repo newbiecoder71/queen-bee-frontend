@@ -112,6 +112,8 @@ const NewArrivals = () => {
                         className={`w-full h-[500px] rounded-lg ${
                           shouldContainImage(product.name) ? "object-contain bg-white" : "object-cover"
                         }`}
+                        loading="lazy"
+                        decoding="async"
                         draggable="false"
                       />
                     </Link>

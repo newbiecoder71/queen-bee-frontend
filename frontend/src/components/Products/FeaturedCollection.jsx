@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-const featured = "/images/IMG_2341.jpg";
+const featured = "/images/IMG_2341-opt.jpg";
 
 const FeaturedCollection = () => {
   return (
@@ -24,7 +24,13 @@ const FeaturedCollection = () => {
             </div>
             {/* Right Content */}
             <div className="lg:w-1/2">
-                <img src={featured} alt="Featured Collection" className="w-full h-full object-cover lg:rounded-tr-3xl lg:rounded-br-3xl" />
+                <img
+                  src={featured}
+                  alt="Featured Collection"
+                  className="w-full h-full object-cover lg:rounded-tr-3xl lg:rounded-br-3xl"
+                  loading="lazy"
+                  decoding="async"
+                />
             </div>
         </div>
     </section>

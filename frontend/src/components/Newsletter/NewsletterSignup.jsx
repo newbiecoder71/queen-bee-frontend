@@ -72,7 +72,7 @@ const NewsletterSignup = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
-            className="w-full p-1 pr-9 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-black"
+            className="h-10 w-full px-3 pr-9 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-black"
           />
           {email && (
             <button
@@ -89,7 +89,7 @@ const NewsletterSignup = () => {
         <button
           type="submit"
           disabled={status === "sending"}
-          className="bg-black text-white px-6 py-3 text-sm rounded-r-md hover:bg-gray-800 transition-all disabled:opacity-60 whitespace-nowrap"
+          className="h-10 bg-black text-white px-6 text-sm rounded-r-md border border-black hover:bg-gray-800 transition-all disabled:opacity-60 whitespace-nowrap"
         >
           {status === "sending" ? "Saving..." : "Sign Up"}
         </button>

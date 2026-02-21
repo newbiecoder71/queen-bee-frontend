@@ -9,6 +9,7 @@ import {
 import { IoMdClose } from "react-icons/io";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useSelector } from "react-redux";
+import axios from "axios";
 import CartDrawer from "../Layout/CartDrawer";
 
 const Navbar = () => {
@@ -28,15 +29,21 @@ const Navbar = () => {
 
   // ✅ inline navbar search
   const [navSearch, setNavSearch] = useState("");
+  const [navSuggestions, setNavSuggestions] = useState([]);
+  const [navSearching, setNavSearching] = useState(false);
+  const [showNavSuggestions, setShowNavSuggestions] = useState(false);
+  const [navProductCache, setNavProductCache] = useState([]);
   const navSearchRef = useRef(null);
+  const navSearchWrapRef = useRef(null);
 
-  const runNavSearch = () => {
-    const term = navSearch.trim();
+  const runNavSearch = ({ closeMobile = true } = {}) => {
+    const term = String(navSearch || "").trim();
     if (!term) return;
 
     // Send to your collections page using your existing query param
     navigate(`/collections/all?search=${encodeURIComponent(term)}`);
-    setMobileSearchOpen(false);
+    setShowNavSuggestions(false);
+    if (closeMobile) setMobileSearchOpen(false);
 
     // Optional: clear after searching
     // setNavSearch("");
@@ -44,6 +51,7 @@ const Navbar = () => {
 
   const clearNavSearch = () => {
     setNavSearch("");
+    setShowNavSuggestions(false);
     const params = new URLSearchParams(location.search);
     if (params.get("search")) {
       navigate("/collections/all");
@@ -62,6 +70,66 @@ const Navbar = () => {
       return () => clearTimeout(t);
     }
   }, [mobileSearchOpen]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadNavCache = async () => {
+      try {
+        const { data } = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/products`, {
+          params: { limit: 5000 },
+        });
+        if (!mounted) return;
+        setNavProductCache(Array.isArray(data) ? data : []);
+      } catch {
+        if (!mounted) return;
+        setNavProductCache([]);
+      }
+    };
+    loadNavCache();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const term = String(navSearch || "").trim();
+    if (term.length < 1) {
+      setNavSuggestions([]);
+      setNavSearching(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      setNavSearching(true);
+      const q = term.toLowerCase();
+      const suggestions = (Array.isArray(navProductCache) ? navProductCache : [])
+        .filter((p) => {
+          const name = String(p?.name || "").toLowerCase();
+          const sku = String(p?.sku || "").toLowerCase();
+          const brand = String(p?.brand || "").toLowerCase();
+          const category = String(p?.category || "").toLowerCase();
+          return (
+            name.includes(q) ||
+            sku.includes(q) ||
+            brand.includes(q) ||
+            category.includes(q)
+          );
+        })
+        .slice(0, 8);
+      setNavSuggestions(suggestions);
+      setNavSearching(false);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [navSearch, navProductCache]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!navSearchWrapRef.current) return;
+      if (navSearchWrapRef.current.contains(e.target)) return;
+      setShowNavSuggestions(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const cartItemCount = useMemo(() => {
     if (!Array.isArray(cart?.products)) return 0;
@@ -186,13 +254,14 @@ const Navbar = () => {
 
             {/* ✅ Inline Search (Desktop) */}
             <div className="hidden xl:flex items-center">
-              <div className="relative w-56 2xl:w-64">
+              <div ref={navSearchWrapRef} className="relative w-56 2xl:w-64">
                 <input
                   ref={navSearchRef}
                   className="w-full rounded border px-3 py-2 pr-9 text-sm"
                   placeholder="Search products…"
                   value={navSearch}
                   onChange={(e) => setNavSearch(e.target.value)}
+                  onFocus={() => setShowNavSuggestions(true)}
                   onKeyDown={(e) => e.key === "Enter" && runNavSearch()}
                 />
 
@@ -208,6 +277,28 @@ const Navbar = () => {
                   >
                     ✕
                   </button>
+                )}
+
+                {showNavSuggestions && navSearch.trim() && (
+                  <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-72 overflow-auto rounded border bg-white shadow-lg">
+                    {navSearching ? (
+                      <div className="px-3 py-2 text-sm text-gray-600">Searching...</div>
+                    ) : navSuggestions.length > 0 ? (
+                      navSuggestions.map((p) => (
+                        <Link
+                          key={p._id}
+                          to={`/product/${p._id}`}
+                          className="block border-b last:border-b-0 px-3 py-2 text-sm hover:bg-gray-50"
+                          onClick={() => setShowNavSuggestions(false)}
+                        >
+                          <div className="truncate font-medium text-gray-900">{p.name}</div>
+                          <div className="text-xs text-gray-600">${Number(p.price || 0).toFixed(2)}</div>
+                        </Link>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-600">No results found.</div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -291,6 +382,7 @@ const Navbar = () => {
                 placeholder="Search products…"
                 value={navSearch}
                 onChange={(e) => setNavSearch(e.target.value)}
+                onFocus={() => setShowNavSuggestions(true)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     runNavSearch();
@@ -311,6 +403,31 @@ const Navbar = () => {
                 </button>
               )}
             </div>
+
+            {showNavSuggestions && navSearch.trim() && (
+              <div className="mt-2 max-h-64 overflow-auto rounded border bg-white shadow">
+                {navSearching ? (
+                  <div className="px-3 py-2 text-sm text-gray-600">Searching...</div>
+                ) : navSuggestions.length > 0 ? (
+                  navSuggestions.map((p) => (
+                    <Link
+                      key={p._id}
+                      to={`/product/${p._id}`}
+                      className="block border-b last:border-b-0 px-3 py-2 text-sm hover:bg-gray-50"
+                      onClick={() => {
+                        setShowNavSuggestions(false);
+                        setMobileSearchOpen(false);
+                      }}
+                    >
+                      <div className="truncate font-medium text-gray-900">{p.name}</div>
+                      <div className="text-xs text-gray-600">${Number(p.price || 0).toFixed(2)}</div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-sm text-gray-600">No results found.</div>
+                )}
+              </div>
+            )}
 
             <button
               type="button"

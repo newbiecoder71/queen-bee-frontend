@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import heroImg from "/images/IMG_2357.jpg";
+import heroImg from "/images/IMG_2357-opt.jpg";
 
 const Hero = () => {
   return (
@@ -9,6 +9,9 @@ const Hero = () => {
         src={heroImg}
         alt="Rabbit"
         className="w-full h-[400px] md:h-[600px] lg:h-[750px] object-cover"
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
       />
 
       {/* Overlay for contrast */}
