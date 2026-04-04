@@ -83,7 +83,7 @@ const AdminSubscriberListPage = () => {
 
           <button
             onClick={load}
-            className="rounded bg-black px-4 py-2 text-white font-semibold hover:bg-gray-900"
+            className="rounded bg-purple-fill px-4 py-2 text-white font-semibold hover:bg-purple-900"
             type="button"
           >
             Search
@@ -145,3 +145,4 @@ const AdminSubscriberListPage = () => {
 };
 
 export default AdminSubscriberListPage;
+

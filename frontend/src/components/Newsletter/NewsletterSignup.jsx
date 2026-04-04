@@ -89,7 +89,7 @@ const NewsletterSignup = () => {
         <button
           type="submit"
           disabled={status === "sending"}
-          className="h-10 bg-black text-white px-6 text-sm rounded-r-md border border-black hover:bg-gray-800 transition-all disabled:opacity-60 whitespace-nowrap"
+          className="h-10 theme-primary-btn px-6 text-sm rounded-r-md border transition-all disabled:opacity-60 whitespace-nowrap"
         >
           {status === "sending" ? "Saving..." : "Sign Up"}
         </button>
@@ -99,3 +99,4 @@ const NewsletterSignup = () => {
 };
 
 export default NewsletterSignup;
+

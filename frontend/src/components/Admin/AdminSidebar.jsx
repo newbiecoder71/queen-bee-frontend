@@ -1,19 +1,17 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
+  FaBars,
   FaBoxOpen,
-  FaClipboardList,
+  FaCashRegister,
+  FaChevronDown,
+  FaCogs,
+  FaGift,
+  FaNewspaper,
+  FaPalette,
   FaSignOutAlt,
   FaStore,
   FaUser,
-  FaThLarge,
-  FaEnvelope,
-  FaEnvelopeOpenText,
-  FaCashRegister,
-  FaMedal,
-  FaRegClock,
   FaUserCog,
-  FaCogs,
-  FaBars,
 } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
@@ -24,6 +22,7 @@ import { fetchNewSubscriberCount } from "../../redux/slices/newsletterSlice";
 
 const AdminSidebar = ({ onDesktopToggle, showDesktopToggle = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const POS_ACTIVE_EMPLOYEE_CONTEXT_KEY = "posActiveEmployeeContext";
   const { user } = useSelector((state) => state.auth);
@@ -49,7 +48,9 @@ const AdminSidebar = ({ onDesktopToggle, showDesktopToggle = false }) => {
   const isPosSwitchedToDifferentEmployee =
     Boolean(posEmployeeContext?._id) &&
     String(posEmployeeContext?._id) !== String(user?._id || "");
-  const switchedRole = String(posEmployeeContext?.employeeRole || "").trim().toLowerCase();
+  const switchedRole = String(posEmployeeContext?.employeeRole || "")
+    .trim()
+    .toLowerCase();
   const switchedIsManager = switchedRole === "manager";
   const switchedIsCashier = switchedRole === "cashier";
 
@@ -67,7 +68,10 @@ const AdminSidebar = ({ onDesktopToggle, showDesktopToggle = false }) => {
   const canPos = adminSidebarMode || permissions.includes("pos.access");
   const canTimeClock = adminSidebarMode || permissions.includes("timeclock.access");
   const canProducts =
-    adminSidebarMode || (!posScopedEmployeeMode ? permissions.includes("products.view") : !switchedIsCashier && permissions.includes("products.view"));
+    adminSidebarMode ||
+    (!posScopedEmployeeMode
+      ? permissions.includes("products.view")
+      : !switchedIsCashier && permissions.includes("products.view"));
   const canOrders = adminSidebarMode || permissions.includes("orders.view");
   const canRewards = adminSidebarMode || permissions.includes("customer_rewards.view");
   const dashboardLink = isAdmin
@@ -78,7 +82,6 @@ const AdminSidebar = ({ onDesktopToggle, showDesktopToggle = false }) => {
     ? "/admin/time-clock"
     : "/admin/dashboard";
 
-  // ✅ new messages count from redux
   const { newCount } = useSelector((state) => state.messages);
 
   useEffect(() => {
@@ -108,6 +111,55 @@ const AdminSidebar = ({ onDesktopToggle, showDesktopToggle = false }) => {
       ? "bg-gray-700 text-white py-3 px-4 rounded flex items-center space-x-2"
       : "text-gray-300 hover:bg-gray-700 hover:text-white py-3 px-4 rounded flex items-center space-x-2";
 
+  const groupButtonClass =
+    "w-full text-left text-gray-300 hover:bg-gray-700 hover:text-white py-3 px-4 rounded flex items-center justify-between gap-2";
+  const groupChildClass =
+    "ml-6 mt-1 flex flex-col space-y-1 border-l border-gray-700 pl-3";
+  const hasActiveChild = (paths) => paths.some((path) => location.pathname === path);
+
+  const [openGroups, setOpenGroups] = useState(() => ({
+    employees: false,
+    customers: false,
+    products: false,
+    marketing: false,
+    settings: false,
+  }));
+
+  useEffect(() => {
+    setOpenGroups((prev) => ({
+      ...prev,
+      employees:
+        prev.employees ||
+        hasActiveChild([
+          "/admin/employees",
+          "/admin/time-clock",
+          "/admin/time-clock-tracking",
+        ]),
+      customers:
+        prev.customers ||
+        hasActiveChild(["/admin/customers", "/admin/customer-rewards"]),
+      products:
+        prev.products ||
+        hasActiveChild([
+          "/admin/products",
+          "/admin/orders",
+          "/admin/quilting-orders",
+          "/admin/gift-cards",
+        ]),
+      marketing:
+        prev.marketing ||
+        hasActiveChild(["/admin/newsletters", "/admin/messages", "/admin/subscribers"]),
+      settings:
+        prev.settings || hasActiveChild(["/admin/settings", "/admin/theme"]),
+    }));
+  }, [location.pathname]);
+
+  const toggleGroup = (key) =>
+    setOpenGroups((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between gap-2">
@@ -127,106 +179,203 @@ const AdminSidebar = ({ onDesktopToggle, showDesktopToggle = false }) => {
       </div>
 
       <Link to={dashboardLink}>
-        <h2 className="text-xl font-medium mb-6 text-center">
+        <h2 className="mb-6 text-center text-xl font-medium">
           {isAdmin ? "Admin Dashboard" : "Employee Dashboard"}
         </h2>
       </Link>
 
       <nav className="flex flex-col space-y-2">
         {!posScopedEmployeeMode && isAdmin && (
-          <NavLink to="/admin/employees" className={navClass}>
-            <FaUserCog />
-            <span>Employees</span>
-          </NavLink>
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleGroup("employees")}
+              className={groupButtonClass}
+              aria-expanded={openGroups.employees}
+            >
+              <span className="flex items-center gap-2">
+                <FaUserCog />
+                <span>Employees</span>
+              </span>
+              <FaChevronDown
+                className={`transition-transform ${
+                  openGroups.employees ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {openGroups.employees && (
+              <div className={groupChildClass}>
+                <NavLink to="/admin/employees" className={navClass}>
+                  <span>Edit Employees</span>
+                </NavLink>
+                {canTimeClock && (
+                  <NavLink to="/admin/time-clock" className={navClass}>
+                    <span>Time Clock</span>
+                  </NavLink>
+                )}
+                <NavLink to="/admin/time-clock-tracking" className={navClass}>
+                  <span>Employee Tracking</span>
+                </NavLink>
+              </div>
+            )}
+          </div>
         )}
 
         {!posScopedEmployeeMode && isAdmin && (
-          <NavLink to="/admin/customers" className={navClass}>
-            <FaUser />
-            <span>Customers</span>
-          </NavLink>
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleGroup("customers")}
+              className={groupButtonClass}
+              aria-expanded={openGroups.customers}
+            >
+              <span className="flex items-center gap-2">
+                <FaUser />
+                <span>Customers</span>
+              </span>
+              <FaChevronDown
+                className={`transition-transform ${
+                  openGroups.customers ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {openGroups.customers && (
+              <div className={groupChildClass}>
+                <NavLink to="/admin/customers" className={navClass}>
+                  <span>Edit Customers</span>
+                </NavLink>
+                {canRewards && (
+                  <NavLink to="/admin/customer-rewards" className={navClass}>
+                    <span>Customer Rewards</span>
+                  </NavLink>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {!posScopedEmployeeMode && isAdmin && (
-          <NavLink to="/admin/settings" className={navClass}>
-            <FaCogs />
-            <span>Settings</span>
-          </NavLink>
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleGroup("products")}
+              className={groupButtonClass}
+              aria-expanded={openGroups.products}
+            >
+              <span className="flex items-center gap-2">
+                <FaBoxOpen />
+                <span>Products</span>
+              </span>
+              <FaChevronDown
+                className={`transition-transform ${
+                  openGroups.products ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {openGroups.products && (
+              <div className={groupChildClass}>
+                <NavLink to="/admin/products" className={navClass}>
+                  <span>Products</span>
+                </NavLink>
+                {canOrders && (
+                  <NavLink to="/admin/orders" className={navClass}>
+                    <span>Orders</span>
+                  </NavLink>
+                )}
+                {!posScopedEmployeeMode && isAdmin && (
+                  <NavLink to="/admin/quilting-orders" className={navClass}>
+                    <span>Quilting Orders</span>
+                  </NavLink>
+                )}
+                {!posScopedEmployeeMode && isAdmin && (
+                  <NavLink to="/admin/gift-cards" className={navClass}>
+                    <span>Gift Cards</span>
+                  </NavLink>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
-        {canProducts && (
-          <NavLink to="/admin/products" className={navClass}>
-            <FaBoxOpen />
-            <span>Products</span>
-          </NavLink>
+        {!posScopedEmployeeMode && isAdmin && (
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleGroup("marketing")}
+              className={groupButtonClass}
+              aria-expanded={openGroups.marketing}
+            >
+              <span className="flex items-center gap-2">
+                <FaNewspaper />
+                <span>Marketing</span>
+              </span>
+              <FaChevronDown
+                className={`transition-transform ${
+                  openGroups.marketing ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {openGroups.marketing && (
+              <div className={groupChildClass}>
+                <NavLink to="/admin/newsletters" className={navClass}>
+                  <span>Newsletters</span>
+                </NavLink>
+                <NavLink to="/admin/messages" className={navClass}>
+                  <span className="flex-1">Messages</span>
+                  {newCount > 0 && (
+                    <span className="ml-auto inline-flex min-w-[20px] justify-center rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
+                      {newCount}
+                    </span>
+                  )}
+                </NavLink>
+                <NavLink to="/admin/subscribers" className={navClass}>
+                  <span className="flex-1">Subscribers</span>
+                  {newEmailCount > 0 && (
+                    <span className="ml-auto inline-flex min-w-[20px] justify-center rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
+                      {newEmailCount}
+                    </span>
+                  )}
+                </NavLink>
+              </div>
+            )}
+          </div>
         )}
 
-        {canOrders && (
-          <NavLink to="/admin/orders" className={navClass}>
-            <FaClipboardList />
-            <span>Orders</span>
-          </NavLink>
+        {!posScopedEmployeeMode && isAdmin && (
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleGroup("settings")}
+              className={groupButtonClass}
+              aria-expanded={openGroups.settings}
+            >
+              <span className="flex items-center gap-2">
+                <FaCogs />
+                <span>Settings</span>
+              </span>
+              <FaChevronDown
+                className={`transition-transform ${
+                  openGroups.settings ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {openGroups.settings && (
+              <div className={groupChildClass}>
+                <NavLink to="/admin/settings" className={navClass}>
+                  <span>Settings</span>
+                </NavLink>
+                <NavLink to="/admin/theme" className={navClass}>
+                  <span>Theme</span>
+                </NavLink>
+              </div>
+            )}
+          </div>
         )}
 
         {canPos && (
           <NavLink to="/admin/pos" className={navClass}>
             <FaCashRegister />
             <span>POS</span>
-          </NavLink>
-        )}
-
-        {canTimeClock && (
-          <NavLink to="/admin/time-clock" className={navClass}>
-            <FaRegClock />
-            <span>Time Clock</span>
-          </NavLink>
-        )}
-
-        {!posScopedEmployeeMode && isAdmin && (
-          <NavLink to="/admin/time-clock-tracking" className={navClass}>
-            <FaRegClock />
-            <span>Employee Tracking</span>
-          </NavLink>
-        )}
-
-        {canRewards && (
-          <NavLink to="/admin/customer-rewards" className={navClass}>
-            <FaMedal />
-            <span>Customer Rewards</span>
-          </NavLink>
-        )}
-
-        {!posScopedEmployeeMode && isAdmin && (
-          <NavLink to="/admin/quilting-orders" className={navClass}>
-            <FaThLarge />
-            <span>Quilting Orders</span>
-          </NavLink>
-        )}
-
-        {/* ✅ Messages with badge */}
-        {!posScopedEmployeeMode && isAdmin && (
-          <NavLink to="/admin/messages" className={navClass}>
-            <FaEnvelope />
-            <span className="flex-1">Messages</span>
-
-            {newCount > 0 && (
-              <span className="ml-auto inline-flex min-w-[20px] justify-center rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
-                {newCount}
-              </span>
-            )}
-          </NavLink>
-        )}
-
-        {!posScopedEmployeeMode && isAdmin && (
-          <NavLink to="/admin/subscribers" className={navClass}>
-            <FaEnvelopeOpenText />
-            <span className="flex-1">Subscribers</span>
-
-            {newEmailCount > 0 && (
-              <span className="ml-auto inline-flex min-w-[20px] justify-center rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
-                {newEmailCount}
-              </span>
-            )}
           </NavLink>
         )}
 
@@ -242,7 +391,7 @@ const AdminSidebar = ({ onDesktopToggle, showDesktopToggle = false }) => {
         <div className="mt-6">
           <button
             onClick={handleLogout}
-            className="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded flex items-center justify-center space-x-2"
+            className="flex w-full items-center justify-center space-x-2 rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
           >
             <FaSignOutAlt />
             <span>Logout</span>

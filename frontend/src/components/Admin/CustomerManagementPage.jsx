@@ -14,6 +14,8 @@ const emptyForm = {
   taxExemptId: "",
   employeeDiscountEnabled: false,
   employeeDiscountPercent: "",
+  password: "",
+  confirmPassword: "",
 };
 
 const CustomerManagementPage = () => {
@@ -99,6 +101,8 @@ const CustomerManagementPage = () => {
       employeeDiscountPercent: customer.employeeDiscountEnabled
         ? String(Number(customer.employeeDiscountPercent || 0))
         : "",
+      password: "",
+      confirmPassword: "",
     });
     setShowModal(true);
     setError("");
@@ -113,6 +117,19 @@ const CustomerManagementPage = () => {
     if (!String(form.phone || "").trim()) {
       setError("Phone is required.");
       return;
+    }
+    if (String(form.password || "").trim() || String(form.confirmPassword || "").trim()) {
+      if (String(form.password || "") !== String(form.confirmPassword || "")) {
+        setError("Password and confirm password do not match.");
+        return;
+      }
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/;
+      if (!passwordRegex.test(String(form.password || ""))) {
+        setError(
+          "Password must be at least 6 characters and include uppercase, lowercase, and a number."
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -141,6 +158,9 @@ const CustomerManagementPage = () => {
           ? Number(form.employeeDiscountPercent || 0)
           : 0,
       };
+      if (String(form.password || "").trim()) {
+        payload.password = String(form.password).trim();
+      }
 
       const isEdit = Boolean(form._id);
       const url = isEdit
@@ -200,7 +220,7 @@ const CustomerManagementPage = () => {
           <button
             type="button"
             onClick={() => loadCustomers(search)}
-            className="rounded border px-3 py-2 text-sm font-semibold hover:bg-gray-50"
+            className="rounded theme-primary-btn px-3 py-2 text-sm font-semibold text-white hover:opacity-95"
           >
             Search
           </button>
@@ -264,7 +284,7 @@ const CustomerManagementPage = () => {
                       .join(", ") || "-"}
                   </td>
                   <td className="px-3 py-2">{customer.phone || "-"}</td>
-                  <td className="px-3 py-2">{customer.customerContactEmail || "-"}</td>
+                  <td className="px-3 py-2">{customer.customerContactEmail || customer.email || "-"}</td>
                   <td className="px-3 py-2">
                     {customer.birthdayMonth && customer.birthdayDay
                       ? `${customer.birthdayMonth}/${customer.birthdayDay}`
@@ -422,6 +442,32 @@ const CustomerManagementPage = () => {
                   }
                 />
               </div>
+              <div className="md:col-span-2 mt-1 rounded border bg-gray-50 p-2">
+                <div className="mb-2 text-xs font-semibold text-gray-700">
+                  Reset Login Password (optional)
+                </div>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                  <input
+                    type="password"
+                    className="rounded border p-2"
+                    placeholder="New password"
+                    value={form.password}
+                    onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                  />
+                  <input
+                    type="password"
+                    className="rounded border p-2"
+                    placeholder="Confirm password"
+                    value={form.confirmPassword}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="mt-1 text-[11px] text-gray-600">
+                  Rule: at least 6 characters with uppercase, lowercase, and a number.
+                </div>
+              </div>
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
@@ -449,3 +495,5 @@ const CustomerManagementPage = () => {
 };
 
 export default CustomerManagementPage;
+
+

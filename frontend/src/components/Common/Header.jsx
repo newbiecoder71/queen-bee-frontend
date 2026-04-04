@@ -7,10 +7,13 @@ const Header = () => {
       {/* Topbar */}
       <Topbar />
       {/* navbar */}
-      <Navbar />
+      <div className="theme-navbar-bg">
+        <Navbar />
+      </div>
       {/* Cart Drawer */}
     </header>
   );
 };
 
 export default Header;
+

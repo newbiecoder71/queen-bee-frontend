@@ -1,12 +1,16 @@
 import { Link } from "react-router-dom";
 import heroImg from "/images/IMG_2357-opt.jpg";
+import { useTheme } from "../../context/ThemeContext";
 
 const Hero = () => {
+  const { theme } = useTheme();
+  const heroSrc = String(theme?.heroImageUrl || "").trim() || heroImg;
+
   return (
     <section className="relative">
       {/* Hero Image */}
       <img
-        src={heroImg}
+        src={heroSrc}
         alt="Rabbit"
         className="w-full h-[400px] md:h-[600px] lg:h-[750px] object-cover"
         loading="eager"
@@ -24,7 +28,7 @@ const Hero = () => {
           {/* Hero Heading */}
           <h1 className="
             relative
-            text-purple-900
+            theme-hero-heading
             text-5xl md:text-7xl
             lg:text-8xl
             font-bold
@@ -53,12 +57,10 @@ const Hero = () => {
             <Link
               to="./collections/all"
               className="
-                bg-purple-800
-                text-white
+                theme-shop-now-btn
                 px-6 py-2
                 rounded-2xl
                 text-lg
-                hover:bg-purple-600
                 transition
                 duration-300
               "

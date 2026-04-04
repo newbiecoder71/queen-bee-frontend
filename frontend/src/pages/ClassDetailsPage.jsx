@@ -88,7 +88,7 @@ const ClassDetailsPage = () => {
 
   return (
     <div className="max-w-5xl mx-auto p-6">
-      <Link to="/classes" className="text-sm text-blue-700 hover:underline">
+      <Link to="/classes" className="text-sm text-purple-fill hover:text-purple-900 hover:underline">
         Back to classes
       </Link>
 
@@ -131,7 +131,7 @@ const ClassDetailsPage = () => {
           <button
             onClick={handleEnroll}
             disabled={busy}
-            className="rounded bg-black px-4 py-2 text-white font-semibold hover:bg-gray-800 disabled:opacity-60"
+            className="rounded theme-add-to-cart-btn px-4 py-2 font-semibold disabled:opacity-60"
           >
             {busy ? "Adding..." : "RSVP + Add To Cart"}
           </button>
@@ -163,3 +163,5 @@ const ClassDetailsPage = () => {
 };
 
 export default ClassDetailsPage;
+
+

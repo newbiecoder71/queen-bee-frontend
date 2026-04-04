@@ -57,6 +57,9 @@ const Profile = () => {
     birthdayMonth: "",
     birthdayDay: "",
   });
+  const [giftCards, setGiftCards] = useState([]);
+  const [giftCardsLoading, setGiftCardsLoading] = useState(false);
+  const [giftCardsError, setGiftCardsError] = useState("");
 
   // ✅ My Classes state
   const [myClasses, setMyClasses] = useState([]);
@@ -144,6 +147,31 @@ const Profile = () => {
     if (!userId || wishlistLoaded) return;
     dispatch(fetchWishlist());
   }, [dispatch, userId, wishlistLoaded]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadGiftCards = async () => {
+      try {
+        setGiftCardsLoading(true);
+        setGiftCardsError("");
+        const authToken = token || localStorage.getItem("userToken");
+        const { data } = await axios.get(`${API}/api/users/profile/gift-cards`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        setGiftCards(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setGiftCards([]);
+        setGiftCardsError(
+          err.response?.data?.message || err.message || "Unable to load gift cards."
+        );
+      } finally {
+        setGiftCardsLoading(false);
+      }
+    };
+
+    loadGiftCards();
+  }, [userId, token]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -364,7 +392,15 @@ const Profile = () => {
         <div className="flex flex-col md:flex-row md:space-x-6 space-y-6 md:space-y-0">
           {/* Left Section */}
           <div className="w-full md:w-1/3 lg:w-1/4 shadow-md rounded-lg p-6 bg-white space-y-4">
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">{user?.name}</h1>
+            <div className="flex items-start justify-between gap-2">
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">{user?.name}</h1>
+              <button
+                onClick={handleLogout}
+                className="theme-profile-logout-btn py-1.5 px-3 rounded font-semibold text-sm shrink-0"
+              >
+                Logout
+              </button>
+            </div>
             <p className="text-sm text-gray-600 mb-4">{user?.email}</p>
             {showRewardsSection && (
               <div className="rounded-lg border bg-white p-3">
@@ -393,6 +429,43 @@ const Profile = () => {
                 </div>
               </div>
             )}
+
+            <div className="rounded-lg border bg-white p-3">
+              <div className="text-sm font-bold mb-2">My Gift Cards</div>
+              {giftCardsLoading && <div className="text-xs text-gray-600">Loading gift cards...</div>}
+              {giftCardsError && <div className="text-xs text-red-600">{giftCardsError}</div>}
+              {!giftCardsLoading && !giftCardsError && giftCards.length === 0 && (
+                <div className="text-xs text-gray-600">No gift cards found on your profile.</div>
+              )}
+              {!giftCardsLoading && giftCards.length > 0 && (
+                <div className="max-h-64 overflow-auto rounded border">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50 text-left">
+                      <tr>
+                        <th className="px-2 py-1">Card #</th>
+                        <th className="px-2 py-1 text-right">Balance</th>
+                        <th className="px-2 py-1">Status</th>
+                        <th className="px-2 py-1">Issued</th>
+                        <th className="px-2 py-1">Last Used</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {giftCards.map((card) => (
+                        <tr key={card._id} className="border-t">
+                          <td className="px-2 py-1 font-mono">{card.cardNumber}</td>
+                          <td className="px-2 py-1 text-right font-semibold">
+                            ${Number(card.balance || 0).toFixed(2)}
+                          </td>
+                          <td className="px-2 py-1 capitalize">{card.status || "-"}</td>
+                          <td className="px-2 py-1">{formatDateTime(card.issuedAt)}</td>
+                          <td className="px-2 py-1">{formatDateTime(card.lastUsedAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
             <form onSubmit={handleProfileSave} className="rounded-lg border bg-white p-3 space-y-2">
               <div className="text-sm font-bold">Profile Details</div>
@@ -473,18 +546,11 @@ const Profile = () => {
               <button
                 type="submit"
                 disabled={profileSaving}
-                className="w-full rounded bg-black text-white py-2 text-sm font-semibold hover:bg-gray-800 disabled:opacity-60"
+                className="w-full rounded theme-profile-save-btn py-2 text-sm font-semibold disabled:opacity-60"
               >
                 {profileSaving ? "Saving..." : "Save Profile"}
               </button>
             </form>
-
-            <button
-              onClick={handleLogout}
-              className="w-full bg-red-500 text-white py-2 px-4 rounded font-semibold hover:bg-red-600"
-            >
-              Logout
-            </button>
           </div>
 
           {/* Right Section - Orders + Classes */}
@@ -647,7 +713,7 @@ const Profile = () => {
                           className={`rounded px-3 py-1 text-sm font-semibold border mr-2 ${
                             addingClassId === c._id
                               ? "bg-gray-200 text-gray-600 cursor-not-allowed"
-                              : "bg-white hover:bg-blue-50 text-blue-700 border-blue-300"
+                              : "theme-add-to-cart-btn border-transparent"
                           }`}
                           type="button"
                         >
@@ -686,3 +752,4 @@ const Profile = () => {
 };
 
 export default Profile;
+

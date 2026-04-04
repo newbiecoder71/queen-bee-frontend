@@ -231,7 +231,7 @@ const OrderManagement = () => {
               <button
                 type="button"
                 onClick={searchCustomers}
-                className="rounded border px-3 py-2 text-sm font-semibold hover:bg-gray-50"
+                className="rounded bg-purple-fill px-3 py-2 text-sm font-semibold text-white hover:bg-purple-900"
               >
                 {searchingCustomers ? "Searching..." : "Search"}
               </button>
@@ -284,3 +284,4 @@ const OrderManagement = () => {
 };
 
 export default OrderManagement;
+

@@ -43,6 +43,10 @@ import EmployeeSettingsPage from "./components/Admin/EmployeeSettingsPage";
 import EmployeeManagementPage from "./components/Admin/EmployeeManagementPage";
 import CustomerManagementPage from "./components/Admin/CustomerManagementPage";
 import AdminIndexRedirect from "./components/Admin/AdminIndexRedirect";
+import AdminGiftCardsPage from "./components/Admin/AdminGiftCardsPage";
+import AdminThemePage from "./components/Admin/AdminThemePage";
+import AdminNewslettersPage from "./components/Admin/AdminNewslettersPage";
+import { ThemeProvider } from "./context/ThemeContext";
 
 import { Provider } from "react-redux";
 import store from "./redux/store";
@@ -63,10 +67,11 @@ const App = () => {
 
   return (
     <Provider store={store}>
-      <BrowserRouter>
-        <Toaster position="top-right" />
-        <ScrollToTop />
-        <Routes>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Toaster position="top-right" />
+          <ScrollToTop />
+          <Routes>
           <Route path="/" element={<UserLayout />}>
             <Route index element={<Home />} />
             <Route path="login" element={<Login />} />
@@ -102,6 +107,9 @@ const App = () => {
             <Route path="orders" element={<ProtectedRoute role="admin"><OrderManagement /></ProtectedRoute>} />
             <Route path="orders/:id" element={<ProtectedRoute role="admin"><OrderDetailsPage /></ProtectedRoute>} />
             <Route path="pos" element={<ProtectedRoute role="admin"><PosManagement /></ProtectedRoute>} />
+            <Route path="gift-cards" element={<ProtectedRoute role="admin"><AdminGiftCardsPage /></ProtectedRoute>} />
+            <Route path="theme" element={<ProtectedRoute role="admin"><AdminThemePage /></ProtectedRoute>} />
+            <Route path="newsletters" element={<ProtectedRoute role="admin"><AdminNewslettersPage /></ProtectedRoute>} />
             <Route path="time-clock" element={<ProtectedRoute role="admin"><TimeClockManagement /></ProtectedRoute>} />
             <Route path="time-clock-tracking" element={<ProtectedRoute role="admin"><EmployeeTrackingPage /></ProtectedRoute>} />
             <Route path="customer-rewards" element={<ProtectedRoute role="admin"><CustomerRewardsPage /></ProtectedRoute>} />
@@ -110,8 +118,9 @@ const App = () => {
             <Route path="messages" element={<ProtectedRoute role="admin"><AdminMessagesPage /></ProtectedRoute>} />
             <Route path="subscribers" element={<ProtectedRoute role="admin"><AdminSubscriberListPage /></ProtectedRoute>} />
           </Route>
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     </Provider>
   );
 };

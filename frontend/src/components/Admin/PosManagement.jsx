@@ -22,6 +22,9 @@ const emptyCardDetails = {
   cardNumber: "",
   expDate: "",
   cvv: "",
+  giftCardNumber: "",
+  giftCardRedeemedAmount: 0,
+  giftCardRemainingBalance: 0,
 };
 const emptyCustomerForm = {
   name: "",
@@ -34,6 +37,14 @@ const emptyCustomerForm = {
     state: "",
     zip: "",
   },
+};
+
+const emptyGiftCardIssueForm = {
+  amount: "",
+  type: "virtual",
+  recipientName: "",
+  recipientEmail: "",
+  note: "",
 };
 
 const CODE39_PATTERNS = {
@@ -86,6 +97,14 @@ const CODE39_PATTERNS = {
 const toCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
 const normalizeQty3 = (value) => Math.round(Number(value || 0) * 1000) / 1000;
 const formatQty3 = (value) => normalizeQty3(value).toFixed(3);
+const formatGiftCardNumber = (value = "") => {
+  const normalized = String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  const body = normalized.replace(/^QBGC/, "");
+  const chunks = body.match(/.{1,4}/g) || [];
+  return normalized.startsWith("QBGC") ? `QBGC ${chunks.join(" ")}`.trim() : normalized;
+};
 const canRunCustomerLookup = (query = "") => {
   const q = String(query || "").trim();
   if (!q) return false;
@@ -293,6 +312,13 @@ const buildReceiptPrintHtml = (receipt) => {
             : ""
         }
         ${
+          Number(receipt?.giftCardRedeemedAmount || 0) > 0
+            ? `<div class="line"><span>Gift Card</span><span>${String(receipt?.giftCardNumber || "-")}</span></div>
+               <div class="line"><span>Redeemed</span><span>${toCurrency(receipt?.giftCardRedeemedAmount)}</span></div>
+               <div class="line"><span>Remaining Balance</span><span>${toCurrency(receipt?.giftCardRemainingBalance)}</span></div>`
+            : ""
+        }
+        ${
           receipt?.rewardProgressEligible
             ? `<div class="reward-box">
                  <div class="line"><span>Since last reward</span><span>${toCurrency(
@@ -372,6 +398,13 @@ const PosManagement = () => {
   const [loadingCustomerForm, setLoadingCustomerForm] = useState(false);
   const [savingCustomerForm, setSavingCustomerForm] = useState(false);
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [giftCardLookup, setGiftCardLookup] = useState(null);
+  const [giftCardLookupLoading, setGiftCardLookupLoading] = useState(false);
+  const [appliedGiftCard, setAppliedGiftCard] = useState(null);
+  const [showGiftCardIssueModal, setShowGiftCardIssueModal] = useState(false);
+  const [giftCardIssueForm, setGiftCardIssueForm] = useState({ ...emptyGiftCardIssueForm });
+  const [issuingGiftCard, setIssuingGiftCard] = useState(false);
+  const [issuedGiftCard, setIssuedGiftCard] = useState(null);
 
   const [cashTenderedInput, setCashTenderedInput] = useState("");
   const cashTenderedInputRef = useRef(null);
@@ -1089,6 +1122,107 @@ const PosManagement = () => {
     }
   };
 
+  const lookupGiftCard = async (inputNumber = "") => {
+    const raw = String(inputNumber || metaForm?.paymentDetails?.giftCardNumber || "").trim();
+    if (!raw) {
+      setGiftCardLookup(null);
+      return;
+    }
+    try {
+      setGiftCardLookupLoading(true);
+      setAppliedGiftCard(null);
+      const { data } = await api.get(
+        `/api/admin/pos/gift-cards/by-number/${encodeURIComponent(raw)}`
+      );
+      setGiftCardLookup(data || null);
+      setMetaForm((prev) => ({
+        ...prev,
+        paymentDetails: {
+          ...prev.paymentDetails,
+          giftCardNumber: String(data?.cardNumber || raw).toUpperCase(),
+          cardNumber: String(data?.cardNumber || raw).toUpperCase(),
+        },
+      }));
+    } catch (err) {
+      setGiftCardLookup(null);
+      setError(err.response?.data?.message || err.message || "Error looking up gift card");
+    } finally {
+      setGiftCardLookupLoading(false);
+    }
+  };
+
+  const applyGiftCardToCurrentSale = () => {
+    if (!giftCardLookup) {
+      setError("Check the gift card number first.");
+      return;
+    }
+
+    const totalDue = Number(selectedSession?.total || 0);
+    const balance = Number(giftCardLookup?.balance || 0);
+    const appliedAmount = Number(Math.min(balance, totalDue).toFixed(2));
+    const remaining = Number((balance - appliedAmount).toFixed(2));
+    const applied = {
+      cardNumber: String(giftCardLookup?.cardNumber || "").toUpperCase(),
+      appliedAmount,
+      remainingBalance: remaining,
+    };
+    setAppliedGiftCard(applied);
+    setMetaForm((prev) => ({
+      ...prev,
+      paymentDetails: {
+        ...prev.paymentDetails,
+        giftCardNumber: applied.cardNumber,
+        cardNumber: applied.cardNumber,
+        giftCardRedeemedAmount: applied.appliedAmount,
+        giftCardRemainingBalance: applied.remainingBalance,
+      },
+    }));
+    setError("");
+  };
+
+  const issueGiftCardAndAddLine = async () => {
+    if (!requireActiveEmployee()) return;
+    if (!selectedSessionId) {
+      setError("Create a new cart first.");
+      return;
+    }
+
+    const amount = Number(giftCardIssueForm.amount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Gift card amount must be greater than 0.");
+      return;
+    }
+
+    try {
+      setIssuingGiftCard(true);
+      setError("");
+      const issuePayload = {
+        amount,
+        type: giftCardIssueForm.type,
+        recipientName: giftCardIssueForm.recipientName,
+        recipientEmail: giftCardIssueForm.recipientEmail,
+        note: giftCardIssueForm.note,
+      };
+      const { data } = await api.post("/api/admin/pos/gift-cards/issue", issuePayload);
+      setIssuedGiftCard(data || null);
+
+      await api.post(`/api/admin/pos/sessions/${selectedSessionId}/items/misc`, {
+        lineType: "gift_card",
+        name: `Gift Card ${formatGiftCardNumber(data?.cardNumber || "")}`,
+        quantity: 1,
+        price: Number(amount.toFixed(2)),
+        taxExempt: true,
+      });
+
+      await loadSessionById(selectedSessionId);
+      setGiftCardIssueForm({ ...emptyGiftCardIssueForm });
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Error issuing gift card");
+    } finally {
+      setIssuingGiftCard(false);
+    }
+  };
+
   const completeSale = async () => {
     if (!requireActiveEmployee()) return;
     if (!selectedSessionId) {
@@ -1097,9 +1231,21 @@ const PosManagement = () => {
     setCashError("");
     const totalDue = Number(selectedSession?.total || 0);
     const tendered = Number(cashTenderedInput || 0);
-    if (metaForm.paymentMethod === "cash" && tendered < totalDue) {
+    const giftApplied = Number(appliedGiftCard?.appliedAmount || 0);
+    const dueAfterGift = Math.max(0, Number((totalDue - giftApplied).toFixed(2)));
+    if (metaForm.paymentMethod === "cash" && tendered < dueAfterGift) {
       setCashError("Cash tendered must be at least the total due.");
       return;
+    }
+    if (metaForm.paymentMethod === "gift_card") {
+      if (!appliedGiftCard) {
+        setCashError("Check and apply the gift card before completing.");
+        return;
+      }
+      if (dueAfterGift > 0) {
+        setCashError("Gift card does not cover full total. Use Cash or Credit Card for the remaining balance.");
+        return;
+      }
     }
     try {
       setCompleting(true);
@@ -1110,6 +1256,7 @@ const PosManagement = () => {
       });
       const completedSession = data?.session || {};
       const orderId = String(data?.orderId || "");
+      const redeemedGiftCard = data?.giftCard || null;
       const receiptSavings = calculateTotalSavings({
         items: Array.isArray(completedSession?.items) ? completedSession.items : [],
         reward: Number(completedSession?.rewardCreditAppliedAmount || 0),
@@ -1147,8 +1294,23 @@ const PosManagement = () => {
             : 0,
         changeDue:
           String(completedSession?.paymentMethod || metaForm?.paymentMethod || "cash") === "cash"
-            ? Math.max(0, Number((Number(tendered || 0) - Number(completedSession?.total || 0)).toFixed(2)))
+            ? Math.max(
+                0,
+                Number(
+                  (
+                    Number(tendered || 0) -
+                    Math.max(
+                      0,
+                      Number(completedSession?.total || 0) -
+                        Number(redeemedGiftCard?.redeemedAmount || 0)
+                    )
+                  ).toFixed(2)
+                )
+              )
             : 0,
+        giftCardNumber: String(redeemedGiftCard?.maskedCardNumber || ""),
+        giftCardRedeemedAmount: Number(redeemedGiftCard?.redeemedAmount || 0),
+        giftCardRemainingBalance: Number(redeemedGiftCard?.remainingBalance || 0),
         totalSavings: Number(receiptSavings.totalSavings || 0),
         rewardProgressEligible: receiptEligible,
         rewardSinceLast: Number(receiptRewardProgress.sinceLast || 0),
@@ -1173,6 +1335,8 @@ const PosManagement = () => {
 
   useEffect(() => {
     setCashTenderedInput("");
+    setGiftCardLookup(null);
+    setAppliedGiftCard(null);
   }, [selectedSessionId]);
 
   useEffect(() => {
@@ -1181,6 +1345,17 @@ const PosManagement = () => {
       cashTenderedInputRef.current?.focus();
     });
   }, [metaForm.paymentMethod]);
+
+  useEffect(() => {
+    if (metaForm.paymentMethod !== "gift_card") {
+      setGiftCardLookup(null);
+    }
+  }, [metaForm.paymentMethod]);
+
+  useEffect(() => {
+    // If totals change, require a fresh apply for gift card payments.
+    setAppliedGiftCard(null);
+  }, [selectedSession?.total]);
 
   const maybePromptRewardOnPaymentSelection = () => {
     const id = selectedSessionId;
@@ -1401,7 +1576,7 @@ const PosManagement = () => {
                     <button
                       type="button"
                       onClick={clearCustomerFromSession}
-                      className="rounded bg-blue-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 whitespace-nowrap"
+                      className="rounded theme-primary-btn px-2.5 py-1.5 text-xs font-semibold text-white hover:opacity-95 whitespace-nowrap"
                     >
                       Change Customer
                     </button>
@@ -1441,7 +1616,7 @@ const PosManagement = () => {
                   <button
                     type="button"
                     onClick={searchCustomers}
-                    className="rounded bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                    className="rounded theme-primary-btn px-3 py-2 text-sm font-semibold text-white hover:opacity-95"
                   >
                     {searchingCustomers ? "..." : "Find"}
                   </button>
@@ -1532,7 +1707,7 @@ const PosManagement = () => {
                 <button
                   type="button"
                   onClick={searchProducts}
-                  className="rounded bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                  className="rounded theme-primary-btn px-3 py-2 text-sm font-semibold text-white hover:opacity-95"
                 >
                   {searchingProducts ? "..." : "Search"}
                 </button>
@@ -1919,8 +2094,80 @@ const PosManagement = () => {
                 </button>
               </div>
 
-              {(metaForm.paymentMethod === "gift_card" ||
-                metaForm.paymentMethod === "credit_card") && (
+              {metaForm.paymentMethod === "gift_card" && (
+                <div className="space-y-2 mb-3">
+                  <div className="flex gap-2">
+                    <input
+                      className="w-full rounded border p-2"
+                      placeholder="Swipe or type gift card number"
+                      value={metaForm.paymentDetails.giftCardNumber || ""}
+                      onChange={(e) =>
+                        setMetaForm((prev) => ({
+                          ...prev,
+                          paymentDetails: {
+                            ...prev.paymentDetails,
+                            giftCardNumber: e.target.value,
+                            cardNumber: e.target.value,
+                          },
+                        }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        e.preventDefault();
+                        lookupGiftCard(e.currentTarget.value);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => lookupGiftCard(metaForm.paymentDetails.giftCardNumber || "")}
+                      className="rounded theme-primary-btn px-3 py-2 text-sm font-semibold text-white hover:opacity-95 whitespace-nowrap"
+                    >
+                      {giftCardLookupLoading ? "..." : "Check"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIssuedGiftCard(null);
+                        setGiftCardIssueForm({ ...emptyGiftCardIssueForm });
+                        setShowGiftCardIssueModal(true);
+                      }}
+                      className="rounded border border-purple-300 bg-purple-50 px-3 py-2 text-sm font-semibold text-purple-800 hover:bg-purple-100 whitespace-nowrap"
+                    >
+                      Issue Gift Card
+                    </button>
+                  </div>
+                  {giftCardLookup && (
+                    <div className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                      <div className="flex justify-between gap-2">
+                        <span>{formatGiftCardNumber(giftCardLookup.cardNumber)}</span>
+                        <span className="font-semibold">
+                          Balance: ${Number(giftCardLookup.balance || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      {appliedGiftCard ? (
+                        <div className="mt-1 flex justify-between gap-2 font-semibold text-emerald-700">
+                          <span>Applied: ${Number(appliedGiftCard.appliedAmount || 0).toFixed(2)}</span>
+                          <span>Remaining: ${Number(appliedGiftCard.remainingBalance || 0).toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-amber-700">
+                          Click Apply to credit this card to the totals.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={applyGiftCardToCurrentSale}
+                    disabled={!giftCardLookup || giftCardLookupLoading}
+                    className="w-full rounded theme-primary-btn px-3 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60"
+                  >
+                    Apply Gift Card
+                  </button>
+                </div>
+              )}
+
+              {metaForm.paymentMethod === "credit_card" && (
                 <div className="space-y-2 mb-3">
                   <input
                     className="w-full rounded border p-2"
@@ -1994,6 +2241,25 @@ const PosManagement = () => {
                   <span>Total</span>
                   <span>${Number(selectedSession?.total || 0).toFixed(2)}</span>
                 </div>
+                {Number(appliedGiftCard?.appliedAmount || 0) > 0 && (
+                  <>
+                    <div className="flex justify-between mt-2">
+                      <span>Gift Card Credit</span>
+                      <span>-${Number(appliedGiftCard?.appliedAmount || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between mt-1 font-semibold">
+                      <span>Balance Due</span>
+                      <span>
+                        $
+                        {Math.max(
+                          0,
+                          Number(selectedSession?.total || 0) -
+                            Number(appliedGiftCard?.appliedAmount || 0)
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between mt-2 font-semibold text-emerald-700">
                   <span>You Saved</span>
                   <span>${Number(registerSavings.totalSavings || 0).toFixed(2)}</span>
@@ -2062,7 +2328,12 @@ const PosManagement = () => {
                         0,
                         Number(
                           (
-                            Number(cashTenderedInput || 0) - Number(selectedSession?.total || 0)
+                            Number(cashTenderedInput || 0) -
+                            Math.max(
+                              0,
+                              Number(selectedSession?.total || 0) -
+                                Number(appliedGiftCard?.appliedAmount || 0)
+                            )
                           ).toFixed(2)
                         )
                       ).toFixed(2)}
@@ -2090,7 +2361,12 @@ const PosManagement = () => {
                   ref={completeButtonRef}
                   type="button"
                   onClick={completeSale}
-                  disabled={completing}
+                  disabled={
+                    completing ||
+                    (metaForm.paymentMethod === "gift_card" &&
+                      Number(appliedGiftCard?.appliedAmount || 0) <
+                        Number(selectedSession?.total || 0))
+                  }
                   className="rounded bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60"
                 >
                   {completing ? "Completing..." : "Complete"}
@@ -2405,6 +2681,118 @@ const PosManagement = () => {
         </div>
       )}
 
+      {showGiftCardIssueModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-2xl rounded-xl border bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold">Issue Gift Card</h3>
+              <button
+                type="button"
+                onClick={() => setShowGiftCardIssueModal(false)}
+                className="rounded border px-3 py-1 text-sm font-semibold hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <input
+                  className="w-full rounded border p-2"
+                  placeholder="Amount"
+                  inputMode="decimal"
+                  value={giftCardIssueForm.amount}
+                  onChange={(e) =>
+                    setGiftCardIssueForm((prev) => ({ ...prev, amount: e.target.value }))
+                  }
+                />
+                <select
+                  className="w-full rounded border p-2"
+                  value={giftCardIssueForm.type}
+                  onChange={(e) =>
+                    setGiftCardIssueForm((prev) => ({ ...prev, type: e.target.value }))
+                  }
+                >
+                  <option value="virtual">Virtual Gift Card</option>
+                  <option value="physical">Physical Gift Card</option>
+                </select>
+                <input
+                  className="w-full rounded border p-2"
+                  placeholder="Recipient Name (optional)"
+                  value={giftCardIssueForm.recipientName}
+                  onChange={(e) =>
+                    setGiftCardIssueForm((prev) => ({ ...prev, recipientName: e.target.value }))
+                  }
+                />
+                <input
+                  className="w-full rounded border p-2"
+                  placeholder="Recipient Email (optional)"
+                  value={giftCardIssueForm.recipientEmail}
+                  onChange={(e) =>
+                    setGiftCardIssueForm((prev) => ({ ...prev, recipientEmail: e.target.value }))
+                  }
+                />
+                <textarea
+                  className="w-full rounded border p-2 h-24"
+                  placeholder="Note (optional)"
+                  value={giftCardIssueForm.note}
+                  onChange={(e) =>
+                    setGiftCardIssueForm((prev) => ({ ...prev, note: e.target.value }))
+                  }
+                />
+
+                <button
+                  type="button"
+                  onClick={issueGiftCardAndAddLine}
+                  disabled={issuingGiftCard}
+                  className="w-full rounded theme-primary-btn px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60"
+                >
+                  {issuingGiftCard ? "Issuing..." : "Issue Card + Add Sale Line"}
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-4 shadow-sm">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-purple-700">Queen Bee Quilts</div>
+                  <div className="text-xs font-bold uppercase tracking-wide text-purple-700">Gift Card</div>
+                </div>
+                <div className="h-24 rounded-lg border border-purple-300 bg-white/70 p-3 flex flex-col justify-center">
+                  <div className="brand-script text-4xl text-center text-gray-900 leading-none">
+                    Queen Bee Quilts
+                  </div>
+                </div>
+                <div className="mt-4 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Card Number</span>
+                    <span className="font-mono text-xs">
+                      {issuedGiftCard?.cardNumber
+                        ? formatGiftCardNumber(issuedGiftCard.cardNumber)
+                        : "Will generate on issue"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Balance</span>
+                    <span className="font-semibold">
+                      ${Number(issuedGiftCard?.balance || giftCardIssueForm.amount || 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {issuedGiftCard?.cardNumber && (
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(issuedGiftCard.cardNumber)}
+                    className="mt-4 w-full rounded border border-purple-300 bg-white px-3 py-2 text-xs font-semibold text-purple-800 hover:bg-purple-50"
+                  >
+                    Copy Card Number
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmDeleteSessionId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-xl border bg-white p-5 shadow-2xl">
@@ -2487,6 +2875,13 @@ const PosManagement = () => {
                   <div className="flex justify-between"><span>Change</span><span>{toCurrency(lastReceipt.changeDue)}</span></div>
                 </>
               )}
+              {Number(lastReceipt.giftCardRedeemedAmount || 0) > 0 && (
+                <>
+                  <div className="flex justify-between"><span>Gift Card</span><span>{lastReceipt.giftCardNumber || "-"}</span></div>
+                  <div className="flex justify-between"><span>Redeemed</span><span>{toCurrency(lastReceipt.giftCardRedeemedAmount || 0)}</span></div>
+                  <div className="flex justify-between"><span>Remaining Balance</span><span>{toCurrency(lastReceipt.giftCardRemainingBalance || 0)}</span></div>
+                </>
+              )}
               <div className="mt-2 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-800">
                 {lastReceipt.rewardProgressEligible ? (
                   <>
@@ -2552,3 +2947,5 @@ const PosManagement = () => {
 };
 
 export default PosManagement;
+
+

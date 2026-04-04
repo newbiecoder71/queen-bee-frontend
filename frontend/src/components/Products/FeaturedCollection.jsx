@@ -18,7 +18,7 @@ const FeaturedCollection = () => {
                     fashion and funtion. Designed to make you look and feel great everyday
                     day.
                 </p>
-                <Link to="/collections/all" className="bg-black text-white px-6 py-3 rounded-lg text-lg hover:bg-gray-800">
+                <Link to="/collections/all" className="theme-shop-now-btn px-6 py-3 rounded-lg text-lg">
                     Shop Now
                 </Link>
             </div>

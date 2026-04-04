@@ -178,7 +178,7 @@ const ProductDetails = ({ productId }) => {
               <button
                 onClick={handleAddToCart}
                 disabled={isButtonDisabled}
-                className={`bg-black text-white py-2 px-6 rounded w-full mb-4 ${isButtonDisabled ? "cursor-not-allowed opacity-50" : "hover:bg-gray-900"}`}
+                className={`theme-add-to-cart-btn py-2 px-6 rounded w-full mb-4 ${isButtonDisabled ? "cursor-not-allowed opacity-50" : ""}`}
               >
                 {isButtonDisabled ? "Adding..." : "ADD TO CART"}
               </button>
@@ -196,7 +196,7 @@ const ProductDetails = ({ productId }) => {
               </button>
 
               <div className="text-center mb-6">
-                <Link to="/collections/all" className="text-blue-500 font-semibold hover:underline">
+                <Link to="/collections/all" className="text-purple-fill font-semibold hover:text-purple-900 hover:underline">
                   Continue Shopping
                 </Link>
               </div>
@@ -225,3 +225,5 @@ const ProductDetails = ({ productId }) => {
 };
 
 export default ProductDetails;
+
+

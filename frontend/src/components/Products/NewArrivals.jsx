@@ -117,7 +117,7 @@ const NewArrivals = () => {
                         draggable="false"
                       />
                     </Link>
-                    <div className="absolute bottom-0 left-0 right-0 bg-opacity-50 backdrop-blur-md text-white p-4 rounded-b-lg">
+                    <div className="absolute bottom-0 left-0 right-0 bg-opacity-50 backdrop-blur-md text-black p-4 rounded-b-lg">
                         <Link to={`/product/${product._id}`} className="block">
                             <h4 className="font-medium">{product.name}</h4>
                             {(() => {
@@ -125,8 +125,8 @@ const NewArrivals = () => {
                               if (onSale) {
                                 return (
                                   <div className="mt-1">
-                                    <p className="text-xs line-through text-gray-200">${regular.toFixed(2)}</p>
-                                    <p className="font-semibold text-yellow-200">On Sale ${sale.toFixed(2)}</p>
+                                    <p className="text-xs line-through text-gray-700">${regular.toFixed(2)}</p>
+                                    <p className="font-semibold text-red-700">On Sale ${sale.toFixed(2)}</p>
                                   </div>
                                 );
                               }

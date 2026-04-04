@@ -98,7 +98,7 @@ const ContactPage = () => {
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
         {/* Left: Contact info card */}
-        <div className="bg-gray-50 rounded-2xl p-8 border">
+        <div className="bg-purple-50 rounded-2xl p-8 border border-purple-100">
           <h2 className="text-xl font-semibold mb-4">How to reach us</h2>
 
           <div className="space-y-4 text-gray-700">
@@ -270,7 +270,7 @@ const ContactPage = () => {
             <button
               type="submit"
               disabled={status === "sending"}
-              className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60"
+              className="w-full theme-primary-btn py-3 rounded-lg transition-colors disabled:opacity-60"
             >
               {status === "sending" ? "Sending..." : "Send Message"}
             </button>
@@ -290,3 +290,5 @@ const ContactPage = () => {
 };
 
 export default ContactPage;
+
+

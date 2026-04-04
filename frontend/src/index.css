@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Allura&display=swap");
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
@@ -7,6 +8,119 @@
   font-family: "Inter", sans-serif;
   font-optical-sizing: auto;
   font-style: normal;
+}
+
+:root {
+  --theme-topbar-bg: #6B21A8;
+  --theme-navbar-bg: #F3E8FF;
+  --theme-primary-btn-bg: #6B21A8;
+  --theme-hero-heading-color: #6B21A8;
+  --theme-primary-btn-hover-bg: #581C87;
+  --theme-auth-card-bg: #FAF5FF;
+  --theme-auth-card-border: #F3E8FF;
+  --theme-profile-icon-color: #6B21A8;
+  --theme-profile-save-btn-bg: #6B21A8;
+  --theme-profile-save-btn-hover-bg: #581C87;
+  --theme-profile-logout-btn-bg: #6B21A8;
+  --theme-profile-logout-btn-hover-bg: #581C87;
+  --theme-add-to-cart-btn-bg: #6B21A8;
+  --theme-add-to-cart-btn-hover-bg: #581C87;
+  --theme-shop-now-btn-bg: #6B21A8;
+  --theme-shop-now-btn-hover-bg: #581C87;
+}
+
+.theme-topbar-bg {
+  background-color: var(--theme-topbar-bg);
+}
+
+.theme-navbar-bg {
+  background-color: var(--theme-navbar-bg);
+}
+
+.theme-primary-btn {
+  background-color: var(--theme-primary-btn-bg);
+  border-color: var(--theme-primary-btn-bg);
+  color: #fff;
+}
+
+.theme-primary-btn:hover {
+  background-color: var(--theme-primary-btn-hover-bg);
+  border-color: var(--theme-primary-btn-hover-bg);
+}
+
+.theme-auth-card {
+  background-color: var(--theme-auth-card-bg);
+  border-color: var(--theme-auth-card-border);
+}
+
+.theme-link {
+  color: var(--theme-primary-btn-bg);
+}
+
+.theme-link:hover {
+  color: var(--theme-primary-btn-hover-bg);
+}
+
+.theme-profile-icon {
+  color: var(--theme-profile-icon-color);
+}
+
+.theme-profile-save-btn {
+  background-color: var(--theme-profile-save-btn-bg);
+  color: #fff;
+}
+
+.theme-profile-save-btn:hover {
+  background-color: var(--theme-profile-save-btn-hover-bg);
+}
+
+.theme-profile-logout-btn {
+  background-color: var(--theme-profile-logout-btn-bg);
+  color: #fff;
+}
+
+.theme-profile-logout-btn:hover {
+  background-color: var(--theme-profile-logout-btn-hover-bg);
+}
+
+.theme-add-to-cart-btn {
+  background-color: var(--theme-add-to-cart-btn-bg);
+  color: #fff;
+}
+
+.theme-add-to-cart-btn:hover {
+  background-color: var(--theme-add-to-cart-btn-hover-bg);
+}
+
+.theme-shop-now-btn {
+  background-color: var(--theme-shop-now-btn-bg);
+  color: #fff;
+}
+
+.theme-shop-now-btn:hover {
+  background-color: var(--theme-shop-now-btn-hover-bg);
+}
+
+.theme-hero-heading {
+  color: var(--theme-hero-heading-color);
+}
+
+.newsletter-editor ul,
+.newsletter-editor ol {
+  padding-left: 1.5rem;
+  margin-left: 0;
+}
+
+.newsletter-editor ul {
+  list-style-type: disc;
+}
+
+.newsletter-editor ol {
+  list-style-type: decimal;
+}
+
+.newsletter-editor li {
+  display: list-item;
 }
 
 /* =========================================
@@ -41,4 +155,10 @@
 .tippy-box[data-theme~='violet'] > .tippy-arrow::before {
   color: #7c3aed;
 }
+
+
+.brand-script {
+  font-family: "Allura", cursive;
+}
+
 

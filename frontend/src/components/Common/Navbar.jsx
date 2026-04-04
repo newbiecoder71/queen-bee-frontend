@@ -167,15 +167,14 @@ const Navbar = () => {
     setMobileShopOpen(false);
   };
 
+
   return (
     <>
-      <nav className="container mx-auto flex items-center justify-between gap-3 py-4 px-4 sm:px-6">
-        {/* Left - Logo */}
-        <div className="min-w-0 flex-shrink">
-          <Link to="/" className="block truncate text-xl font-medium sm:text-2xl">
-            Queen Bee Quilts
-          </Link>
-        </div>
+      <nav className="relative container mx-auto flex items-center justify-between gap-3 py-4 px-4 sm:px-6">
+        {/* Left - Brand */}
+        <Link to="/" className="brand-script text-4xl sm:text-5xl leading-none tracking-normal text-gray-900">
+          Queen Bee Quilts
+        </Link>
 
         {/* Center Navigation (Desktop) */}
         <div className="hidden xl:flex items-center space-x-5">
@@ -246,7 +245,7 @@ const Navbar = () => {
           {user && user.role === "admin" && (
             <Link
               to="/admin"
-              className="block bg-black px-2 rounded text-sm text-white"
+              className="block theme-primary-btn px-2 rounded text-sm hover:opacity-95"
             >
               Admin
             </Link>
@@ -305,7 +304,7 @@ const Navbar = () => {
               <button
                 type="button"
                 onClick={runNavSearch}
-                className="ml-2 rounded bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-900"
+                className="ml-2 rounded theme-primary-btn px-3 py-2 text-sm hover:opacity-95"
               >
                 Search
               </button>
@@ -332,7 +331,7 @@ const Navbar = () => {
               aria-label={user ? `Hello, ${user.name}` : "Login"}
             >
               {user ? (
-                <HiUser className="h-7 w-7 text-blue-600 translate-y-1" />
+                <HiUser className="h-7 w-7 theme-profile-icon translate-y-1" />
               ) : (
                 <HiOutlineUser className="h-7 w-7 text-gray-700 translate-y-1" />
               )}
@@ -340,7 +339,7 @@ const Navbar = () => {
 
             <div
               className="absolute left-1/2 -translate-x-1/2 top-full mt-2 whitespace-nowrap
-                        rounded bg-blue-700 px-3 py-1 text-xs text-white shadow-md
+                        rounded theme-primary-btn px-3 py-1 text-xs shadow-md
                         opacity-0 group-hover:opacity-100 transition-opacity duration-200
                         pointer-events-none z-50"
             >
@@ -353,7 +352,7 @@ const Navbar = () => {
             <HiOutlineShoppingBag className="h-7 w-7 text-gray-700" />
 
             {cartItemCount > 0 && (
-              <span className="absolute -top-1 bg-rabbit-blue text-white text-xs rounded-full px-2 py-0.5">
+              <span className="absolute -top-1 theme-primary-btn text-xs rounded-full px-2 py-0.5">
                 {cartItemCount}
               </span>
             )}
@@ -435,7 +434,7 @@ const Navbar = () => {
                 runNavSearch();
                 setMobileSearchOpen(false);
               }}
-              className="mt-3 w-full rounded bg-blue-700 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+              className="mt-3 w-full rounded theme-primary-btn py-2 text-sm hover:opacity-95"
             >
               Search
             </button>
@@ -459,7 +458,7 @@ const Navbar = () => {
         </div>
 
         <div className="p-4">
-          <h2 className="text-xl font-semibold mb-4">Menu</h2>
+          <h2 className="text-xl mb-4">Menu</h2>
 
           <nav className="space-y-2">
             {/* Mobile SHOP collapsible */}
@@ -521,3 +520,14 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+
+
+
+
+
+
+
+
+
+

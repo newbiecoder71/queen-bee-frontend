@@ -43,7 +43,7 @@ const Register = () => {
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 md:p-12">
         <form
           onSubmit={handleSubmit}
-          className="w-full max-w-md bg-white p-8 rounded-lg border shadow-sm"
+          className="w-full max-w-md theme-auth-card p-8 rounded-lg border shadow-sm"
         >
           <div className="flex justify-center mb-6">
             <h2 className="text-xl font-medium">Queen Bee Quilts</h2>
@@ -124,7 +124,7 @@ const Register = () => {
             className={`w-full p-2 rounded-lg font-semibold transition ${
               loading
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-black text-white hover:bg-gray-800"
+                : "theme-primary-btn"
             }`}
           >
             {loading ? "Signing Up..." : "Sign Up"}
@@ -134,7 +134,7 @@ const Register = () => {
             Already have an account?{" "}
             <Link
               to={`/login?redirect=${encodeURIComponent(redirect)}`}
-              className="text-blue-500 hover:underline"
+              className="theme-link hover:underline"
             >
               Login
             </Link>
@@ -155,3 +155,6 @@ const Register = () => {
 };
 
 export default Register;
+
+
+
