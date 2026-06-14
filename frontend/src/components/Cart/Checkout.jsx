@@ -152,23 +152,10 @@ const Checkout = () => {
   };
 
   /* ---------------------------------------------------------
-   * PAYPAL SUCCESS → Mark checkout paid (Step 2)
+   * PAYPAL SUCCESS ? Finalize paid checkout (Step 2)
    * --------------------------------------------------------- */
-  const handlePaymentSuccess = async (details) => {
+  const handlePaymentSuccess = async () => {
     try {
-      await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/pay`,
-        {
-          paymentStatus: "paid",
-          paymentDetails: details,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-          },
-        }
-      );
-
       await handleFinalizeCheckout(checkoutId);
     } catch (err) {
       console.error("Payment success error:", err);
@@ -176,7 +163,7 @@ const Checkout = () => {
   };
 
   /* ---------------------------------------------------------
-   * FINALIZE CHECKOUT → Create Order (Step 3)
+   * FINALIZE CHECKOUT ? Create Order (Step 3)
    * --------------------------------------------------------- */
   const handleFinalizeCheckout = async (checkoutId) => {
     try {
@@ -582,3 +569,6 @@ const Checkout = () => {
 };
 
 export default Checkout;
+
+
+

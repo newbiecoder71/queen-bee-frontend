@@ -1,50 +1,65 @@
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import axios from "axios";
 
+const paypalEnvironment =
+  typeof window !== "undefined" && /(^|\.)queenbeequilts\.com$/i.test(window.location.hostname)
+    ? "live"
+    : "sandbox";
+
 const PayPalButton = ({ amount, checkoutId, onSuccess, onError }) => {
   return (
     <PayPalScriptProvider
       options={{
         "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID,
+        intent: "capture",
+        currency: "USD",
       }}
     >
       <PayPalButtons
         style={{ layout: "vertical" }}
-        createOrder={(data, actions) => {
-          return actions.order.create({
-            purchase_units: [
-              { amount: { value: parseFloat(amount).toFixed(2) } },
-            ],
-          });
-        }}
-        onApprove={(data, actions) => {
-          return actions.order.capture().then(async (details) => {
-            try {
-              // ✅ Save payment in backend
-              const response = await axios.put(
-                `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/pay`,
-                {
-                  paymentStatus: "paid",
-                  paymentDetails: details,
+        createOrder={async () => {
+          try {
+            const response = await axios.post(
+              `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/paypal-order`,
+              {
+                paypalEnvironment,
+                amount: parseFloat(amount).toFixed(2),
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("userToken")}`,
                 },
-                {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-                  },
-                }
-              );
+              }
+            );
 
-              // ✅ Small delay to let PayPal finish closing its window
-              await new Promise((resolve) => setTimeout(resolve, 400));
+            return response.data.orderId;
+          } catch (error) {
+            onError?.(error);
+            throw error;
+          }
+        }}
+        onApprove={async (data) => {
+          try {
+            const response = await axios.post(
+              `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/paypal-capture`,
+              {
+                orderId: data.orderID,
+                paypalEnvironment,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+                },
+              }
+            );
 
-              // ✅ Only now trigger your success handler (which can dispatch + navigate)
-              onSuccess(response.data);
-
-            } catch (err) {
-              console.error("Payment save failed:", err);
-              onError?.(err);
-            }
-          });
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            onSuccess(response.data);
+          } catch (error) {
+            console.error("PayPal capture failed:", error);
+            onError?.(error);
+            throw error;
+          }
         }}
         onError={onError}
       />
