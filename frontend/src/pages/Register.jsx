@@ -7,7 +7,8 @@ import { mergeCart } from "../redux/slices/cartSlice";
 import ClearableInput from "../components/Forms/ClearableInput";
 
 const Register = () => {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -33,9 +34,13 @@ const Register = () => {
     }
   }, [user, guestId, cart, navigate, isCheckoutRedirect, dispatch]);
 
+  const clearFieldError = () => {
+    if (error) dispatch(clearError());
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    dispatch(registerUser({ name, email, password, confirmPassword }));
+    dispatch(registerUser({ firstName, lastName, email, password, confirmPassword }));
   };
 
   return (
@@ -53,23 +58,34 @@ const Register = () => {
             Enter your details below to sign up.
           </p>
 
-          {/* Name */}
-          <div className="mb-4">
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <ClearableInput
-              label="Name"
+              label="First Name"
               type="text"
-              value={name}
-              placeholder="Enter your name"
+              value={firstName}
+              placeholder="Enter your first name"
               onChange={(e) => {
-                setName(e.target.value);
-                if (error) dispatch(clearError());
+                setFirstName(e.target.value);
+                clearFieldError();
               }}
-              onClear={() => setName("")}
-              error={error?.field === "name" ? error.message : null}
+              onClear={() => setFirstName("")}
+              error={error?.field === "firstName" ? error.message : null}
+            />
+
+            <ClearableInput
+              label="Last Name"
+              type="text"
+              value={lastName}
+              placeholder="Enter your last name"
+              onChange={(e) => {
+                setLastName(e.target.value);
+                clearFieldError();
+              }}
+              onClear={() => setLastName("")}
+              error={error?.field === "lastName" ? error.message : null}
             />
           </div>
 
-          {/* Email */}
           <div className="mb-4">
             <ClearableInput
               label="Email"
@@ -78,14 +94,13 @@ const Register = () => {
               placeholder="Enter your email address"
               onChange={(e) => {
                 setEmail(e.target.value);
-                if (error) dispatch(clearError());
+                clearFieldError();
               }}
               onClear={() => setEmail("")}
               error={error?.field === "email" ? error.message : null}
             />
           </div>
 
-          {/* Password */}
           <div className="mb-4">
             <ClearableInput
               label="Password"
@@ -94,14 +109,13 @@ const Register = () => {
               placeholder="Enter your password"
               onChange={(e) => {
                 setPassword(e.target.value);
-                if (error) dispatch(clearError());
+                clearFieldError();
               }}
               onClear={() => setPassword("")}
               error={error?.field === "password" ? error.message : null}
             />
           </div>
 
-          {/* Confirm Password */}
           <div className="mb-4">
             <ClearableInput
               label="Confirm Password"
@@ -110,14 +124,13 @@ const Register = () => {
               placeholder="Confirm your password"
               onChange={(e) => {
                 setConfirmPassword(e.target.value);
-                if (error) dispatch(clearError());
+                clearFieldError();
               }}
               onClear={() => setConfirmPassword("")}
               error={error?.field === "confirmPassword" ? error.message : null}
             />
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
@@ -155,6 +168,3 @@ const Register = () => {
 };
 
 export default Register;
-
-
-

@@ -33,6 +33,13 @@ const monthOptions = [
 ];
 const dayOptions = Array.from({ length: 31 }, (_, idx) => idx + 1);
 
+const splitStoredName = (value = "") => {
+  const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+};
+
 const Profile = () => {
   const { user, token } = useSelector((state) => state.auth);
   const userId = user?._id;
@@ -46,6 +53,8 @@ const Profile = () => {
   const [profileMessage, setProfileMessage] = useState("");
   const [profileError, setProfileError] = useState("");
   const [profileForm, setProfileForm] = useState({
+    firstName: "",
+    lastName: "",
     phone: "",
     address: {
       line1: "",
@@ -61,7 +70,7 @@ const Profile = () => {
   const [giftCardsLoading, setGiftCardsLoading] = useState(false);
   const [giftCardsError, setGiftCardsError] = useState("");
 
-  // ✅ My Classes state
+  // ? My Classes state
   const [myClasses, setMyClasses] = useState([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [classesError, setClassesError] = useState(null);
@@ -94,7 +103,13 @@ const Profile = () => {
         });
 
         dispatch(setUserProfile(data));
+        const nameParts = {
+          firstName: data?.firstName || splitStoredName(data?.name).firstName,
+          lastName: data?.lastName || splitStoredName(data?.name).lastName,
+        };
         setProfileForm({
+          firstName: nameParts.firstName,
+          lastName: nameParts.lastName,
           phone: data?.phone || "",
           address: {
             line1: data?.address?.line1 || "",
@@ -116,7 +131,7 @@ const Profile = () => {
     loadProfile();
   }, [userId, token, dispatch]);
 
-  // ✅ Fetch classes user RSVP’d to
+  // ? Fetch classes user RSVP�d to
   useEffect(() => {
     if (!userId) return;
 
@@ -195,6 +210,8 @@ const Profile = () => {
       setProfileMessage("");
       const authToken = token || localStorage.getItem("userToken");
       const payload = {
+        firstName: profileForm.firstName,
+        lastName: profileForm.lastName,
         phone: profileForm.phone,
         address: profileForm.address,
         birthdayMonth: profileForm.birthdayMonth ? Number(profileForm.birthdayMonth) : null,
@@ -238,7 +255,7 @@ const Profile = () => {
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
   
-      // ✅ Remove from "My Classes" list instantly
+      // ? Remove from "My Classes" list instantly
       setMyClasses((prev) => prev.filter((c) => c._id !== classId));
     } catch (err) {
       alert(err.response?.data?.message || err.message || "Error canceling RSVP");
@@ -473,6 +490,21 @@ const Profile = () => {
               {profileError && <div className="text-xs text-red-600">{profileError}</div>}
               {profileMessage && <div className="text-xs text-green-700">{profileMessage}</div>}
 
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className="w-full rounded border p-2 text-sm"
+                  placeholder="First name"
+                  value={profileForm.firstName}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                />
+                <input
+                  className="w-full rounded border p-2 text-sm"
+                  placeholder="Last name"
+                  value={profileForm.lastName}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                />
+              </div>
+
               <input
                 className="w-full rounded border p-2 text-sm"
                 placeholder="Phone (optional)"
@@ -641,7 +673,7 @@ const Profile = () => {
                 </div>
               </div>
 
-              {classesLoading && <div className="text-sm text-gray-600">Loading your classes…</div>}
+              {classesLoading && <div className="text-sm text-gray-600">Loading your classes�</div>}
               {classesError && <div className="text-sm text-red-600">{classesError}</div>}
 
               {!classesLoading && !classesError && myClasses.length === 0 && (
@@ -659,7 +691,7 @@ const Profile = () => {
                           <div className="font-semibold truncate">{c.title}</div>
                           <div className="text-xs text-gray-600 mt-1">
                             {formatDateTime(c.start)}
-                            {c.end ? ` → ${formatDateTime(c.end)}` : ""}
+                            {c.end ? ` ? ${formatDateTime(c.end)}` : ""}
                           </div>
                         </div>
 
