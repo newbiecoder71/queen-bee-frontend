@@ -69,6 +69,13 @@ const US_STATES = [
 const getCartItemKey = (item, idx) =>
   `${item.itemType || "product"}-${item.productId || item.classId || item.quiltingOrderId || idx}`;
 
+const splitStoredName = (value = "") => {
+  const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+};
+
 const Checkout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -101,6 +108,27 @@ const Checkout = () => {
       navigate("/");
     }
   }, [cart, loading, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const nameParts = {
+      firstName: user?.firstName || splitStoredName(user?.name).firstName,
+      lastName: user?.lastName || splitStoredName(user?.name).lastName,
+    };
+    const addressLine = [user?.address?.line1, user?.address?.line2].filter(Boolean).join(", ");
+
+    setShippingAddress((prev) => ({
+      firstName: prev.firstName || nameParts.firstName || "",
+      lastName: prev.lastName || nameParts.lastName || "",
+      address: prev.address || addressLine || "",
+      city: prev.city || user?.address?.city || "",
+      zipCode: prev.zipCode || user?.address?.zip || "",
+      state: prev.state || user?.address?.state || "",
+      country: prev.country || ((user?.address?.state || addressLine) ? "USA" : ""),
+      phoneNumber: prev.phoneNumber || user?.phone || "",
+    }));
+  }, [user]);
 
   /* ---------------------------------------------------------
    * TOTALS CALCULATION (matches backend tax: 8.1%)
