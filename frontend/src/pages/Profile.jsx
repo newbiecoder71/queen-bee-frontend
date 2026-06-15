@@ -71,6 +71,14 @@ const Profile = () => {
   const [giftCards, setGiftCards] = useState([]);
   const [giftCardsLoading, setGiftCardsLoading] = useState(false);
   const [giftCardsError, setGiftCardsError] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
 
   // ? My Classes state
   const [myClasses, setMyClasses] = useState([]);
@@ -232,6 +240,30 @@ const Profile = () => {
       setProfileError(err.response?.data?.message || err.message || "Unable to save profile.");
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handlePasswordSave = async (e) => {
+    e.preventDefault();
+    try {
+      setPasswordSaving(true);
+      setPasswordError("");
+      setPasswordMessage("");
+      const authToken = token || localStorage.getItem("userToken");
+      const { data } = await axios.put(
+        `${API}/api/users/profile/password`,
+        passwordForm,
+        {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }
+      );
+
+      setPasswordMessage(data?.message || "Password updated successfully.");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || err.message || "Unable to update password right now.");
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -593,6 +625,55 @@ const Profile = () => {
                 className="w-full rounded theme-profile-save-btn py-2 text-sm font-semibold disabled:opacity-60"
               >
                 {profileSaving ? "Saving..." : "Save Profile"}
+              </button>
+            </form>
+
+
+            <form onSubmit={handlePasswordSave} className="rounded-lg border bg-white p-3 space-y-2">
+              <div className="text-sm font-bold">Change Password</div>
+              {passwordError && <div className="text-xs text-red-600">{passwordError}</div>}
+              {passwordMessage && <div className="text-xs text-green-700">{passwordMessage}</div>}
+              <div className="text-xs text-gray-600">
+                Use at least 6 characters, including uppercase, lowercase, and a number.
+              </div>
+
+              <input
+                className="w-full rounded border p-2 text-sm"
+                type="password"
+                placeholder="Current password"
+                value={passwordForm.currentPassword}
+                onChange={(e) => {
+                  setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }));
+                  setPasswordError("");
+                }}
+              />
+              <input
+                className="w-full rounded border p-2 text-sm"
+                type="password"
+                placeholder="New password"
+                value={passwordForm.newPassword}
+                onChange={(e) => {
+                  setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }));
+                  setPasswordError("");
+                }}
+              />
+              <input
+                className="w-full rounded border p-2 text-sm"
+                type="password"
+                placeholder="Confirm new password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => {
+                  setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }));
+                  setPasswordError("");
+                }}
+              />
+
+              <button
+                type="submit"
+                disabled={passwordSaving}
+                className="w-full rounded theme-profile-save-btn py-2 text-sm font-semibold disabled:opacity-60"
+              >
+                {passwordSaving ? "Updating..." : "Update Password"}
               </button>
             </form>
           </div>

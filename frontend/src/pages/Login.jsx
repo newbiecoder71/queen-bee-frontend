@@ -158,6 +158,11 @@ const Login = () => {
               onClear={() => setPassword("")}
               error={error?.field === "password" ? error.message : null}
             />
+            <div className="-mt-2 text-right">
+              <Link to="/forgot-password" className="text-xs text-blue-600 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           {/* Submit Button */}
