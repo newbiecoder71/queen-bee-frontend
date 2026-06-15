@@ -11,18 +11,14 @@ const CartDrawer = ({ drawerOpen, toggleCartDrawer }) => {
   const { user } = useSelector((state) => state.auth);
   const { cart } = useSelector((state) => state.cart);
 
-  /* ---------------------------------------------
-       REDIRECT TO LOGIN IF NOT LOGGED IN
-  --------------------------------------------- */
   const handleCheckout = () => {
     toggleCartDrawer();
-
-    if (!user) {
-      navigate("/login?redirect=checkout");
-      return;
-    }
-
     navigate("/checkout");
+  };
+
+  const handleSignInCheckout = () => {
+    toggleCartDrawer();
+    navigate("/login?redirect=checkout");
   };
 
   const hasItems =
@@ -68,12 +64,29 @@ const CartDrawer = ({ drawerOpen, toggleCartDrawer }) => {
         <div className="p-4 bg-white sticky bottom-0">
           {hasItems && (
             <>
-              <button
-                onClick={handleCheckout}
-                className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition"
-              >
-                Checkout
-              </button>
+              {user ? (
+                <button
+                  onClick={handleCheckout}
+                  className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition"
+                >
+                  Checkout
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    onClick={handleCheckout}
+                    className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition"
+                  >
+                    Continue as Guest
+                  </button>
+                  <button
+                    onClick={handleSignInCheckout}
+                    className="w-full border border-gray-300 bg-white text-gray-900 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
+                  >
+                    Sign In for Faster Checkout
+                  </button>
+                </div>
+              )}
 
               <p className="text-sm tracking-tighter text-gray-500 mt-2 text-center">
                 Shipping, taxes, and discount codes calculated at checkout.

@@ -81,7 +81,8 @@ const Checkout = () => {
   const dispatch = useDispatch();
 
   const { cart, loading, error } = useSelector((state) => state.cart);
-  const { user } = useSelector((state) => state.auth);
+  const { user, guestId: authGuestId } = useSelector((state) => state.auth);
+  const guestId = authGuestId || localStorage.getItem("guestId") || "";
 
   const [checkoutId, setCheckoutId] = useState(null);
   const [expandedClasses, setExpandedClasses] = useState({});
@@ -96,6 +97,7 @@ const Checkout = () => {
     country: "",
     phoneNumber: "",
   });
+  const [contactEmail, setContactEmail] = useState(user?.email || "");
 
   /* ---------------------------------------------------------
    * SAFE CART CHECK (avoids redirect flickering)
@@ -108,6 +110,12 @@ const Checkout = () => {
       navigate("/");
     }
   }, [cart, loading, navigate]);
+
+  useEffect(() => {
+    if (user?.email) {
+      setContactEmail(user.email);
+    }
+  }, [user?.email]);
 
   useEffect(() => {
     if (!user) return;
@@ -167,6 +175,8 @@ const Checkout = () => {
       createCheckout({
         checkoutItems: cart.products,
         shippingAddress,
+        contactEmail: user?.email || contactEmail.trim(),
+        guestId: user ? undefined : guestId,
         paymentMethod: "Paypal",
         totalPrice: subtotal,
         taxes: tax,
@@ -195,14 +205,17 @@ const Checkout = () => {
    * --------------------------------------------------------- */
   const handleFinalizeCheckout = async (checkoutId) => {
     try {
+      const token = localStorage.getItem("userToken");
       const { data } = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/finalize`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-          },
-        }
+        { guestId: user ? undefined : guestId },
+        token
+          ? {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          : undefined
       );
 
       dispatch(setCheckout(data));
@@ -281,14 +294,25 @@ const Checkout = () => {
         <form onSubmit={handleCreateCheckout}>
           <h3 className="text-lg mb-4">Contact Details</h3>
 
-          {/* Email (disabled) */}
+          {!user && (
+            <div className="mb-4 rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+              Already have an account?{" "}
+              <Link to="/login?redirect=checkout" className="font-semibold text-blue-600 hover:underline">
+                Sign in here
+              </Link>{" "}
+              and your cart will still follow you.
+            </div>
+          )}
+
           <div className="mb-4">
             <label className="block text-gray-700">Email</label>
             <input
               type="email"
-              value={user?.email || ""}
+              value={user?.email || contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
               className="w-full p-2 border rounded"
-              disabled
+              disabled={Boolean(user)}
+              required
             />
           </div>
 
@@ -449,6 +473,7 @@ const Checkout = () => {
                 <PayPalButton
                   amount={grandTotal}
                   checkoutId={checkoutId}
+                  guestId={user ? undefined : guestId}
                   onSuccess={handlePaymentSuccess}
                   onError={(err) => console.error("PayPal Error:", err)}
                 />

@@ -6,11 +6,18 @@ export const createCheckout = createAsyncThunk(
     "checkout/createCheckout",
     async ( checkoutData, { rejectWithValue }) => {
         try {
-            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/checkouts`, checkoutData, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-                },
-            });
+            const token = localStorage.getItem("userToken");
+            const response = await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/api/checkouts`,
+                checkoutData,
+                token
+                    ? {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                      }
+                    : undefined
+            );
             return response.data;
         } catch (error) {
             console.error("Checkout error:", error);

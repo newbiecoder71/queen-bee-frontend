@@ -6,7 +6,7 @@ const paypalEnvironment =
     ? "live"
     : "sandbox";
 
-const PayPalButton = ({ amount, checkoutId, onSuccess, onError }) => {
+const PayPalButton = ({ amount, checkoutId, guestId, onSuccess, onError }) => {
   return (
     <PayPalScriptProvider
       options={{
@@ -19,17 +19,21 @@ const PayPalButton = ({ amount, checkoutId, onSuccess, onError }) => {
         style={{ layout: "vertical" }}
         createOrder={async () => {
           try {
+            const token = localStorage.getItem("userToken");
             const response = await axios.post(
               `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/paypal-order`,
               {
                 paypalEnvironment,
                 amount: parseFloat(amount).toFixed(2),
+                guestId: guestId || undefined,
               },
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-                },
-              }
+              token
+                ? {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }
+                : undefined
             );
 
             return response.data.orderId;
@@ -40,17 +44,21 @@ const PayPalButton = ({ amount, checkoutId, onSuccess, onError }) => {
         }}
         onApprove={async (data) => {
           try {
+            const token = localStorage.getItem("userToken");
             const response = await axios.post(
               `${import.meta.env.VITE_BACKEND_URL}/api/checkouts/${checkoutId}/paypal-capture`,
               {
                 orderId: data.orderID,
                 paypalEnvironment,
+                guestId: guestId || undefined,
               },
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-                },
-              }
+              token
+                ? {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }
+                : undefined
             );
 
             await new Promise((resolve) => setTimeout(resolve, 400));
