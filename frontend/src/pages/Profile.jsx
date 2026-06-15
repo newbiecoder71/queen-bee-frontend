@@ -55,6 +55,7 @@ const Profile = () => {
   const [profileForm, setProfileForm] = useState({
     firstName: "",
     lastName: "",
+    email: "",
     phone: "",
     address: {
       line1: "",
@@ -110,6 +111,7 @@ const Profile = () => {
         setProfileForm({
           firstName: nameParts.firstName,
           lastName: nameParts.lastName,
+          email: data?.email || "",
           phone: data?.phone || "",
           address: {
             line1: data?.address?.line1 || "",
@@ -212,6 +214,7 @@ const Profile = () => {
       const payload = {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
+        email: profileForm.email,
         phone: profileForm.phone,
         address: profileForm.address,
         birthdayMonth: profileForm.birthdayMonth ? Number(profileForm.birthdayMonth) : null,
@@ -504,6 +507,14 @@ const Profile = () => {
                   onChange={(e) => setProfileForm((prev) => ({ ...prev, lastName: e.target.value }))}
                 />
               </div>
+
+              <input
+                className="w-full rounded border p-2 text-sm"
+                type="email"
+                placeholder="Email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
+              />
 
               <input
                 className="w-full rounded border p-2 text-sm"
