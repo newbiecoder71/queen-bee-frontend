@@ -15,6 +15,7 @@ import {
   removeFromWishlist,
 } from "../redux/slices/wishlistSlice";
 import RewardsMedal from "../components/Profile/RewardsMedal";
+import { formatPhoneNumber } from "../utils/phone";
 
 const API = import.meta.env.VITE_BACKEND_URL;
 const monthOptions = [
@@ -112,7 +113,7 @@ const Profile = () => {
           firstName: nameParts.firstName,
           lastName: nameParts.lastName,
           email: data?.email || "",
-          phone: data?.phone || "",
+          phone: formatPhoneNumber(data?.phone || ""),
           address: {
             line1: data?.address?.line1 || "",
             line2: data?.address?.line2 || "",
@@ -133,7 +134,7 @@ const Profile = () => {
     loadProfile();
   }, [userId, token, dispatch]);
 
-  // ? Fetch classes user RSVP’d to
+  // ? Fetch classes user RSVPd to
   useEffect(() => {
     if (!userId) return;
 
@@ -215,7 +216,7 @@ const Profile = () => {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         email: profileForm.email,
-        phone: profileForm.phone,
+        phone: formatPhoneNumber(profileForm.phone),
         address: profileForm.address,
         birthdayMonth: profileForm.birthdayMonth ? Number(profileForm.birthdayMonth) : null,
         birthdayDay: profileForm.birthdayDay ? Number(profileForm.birthdayDay) : null,
@@ -520,7 +521,7 @@ const Profile = () => {
                 className="w-full rounded border p-2 text-sm"
                 placeholder="Phone (optional)"
                 value={profileForm.phone}
-                onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
+                onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
               />
               <input
                 className="w-full rounded border p-2 text-sm"
@@ -684,7 +685,7 @@ const Profile = () => {
                 </div>
               </div>
 
-              {classesLoading && <div className="text-sm text-gray-600">Loading your classes…</div>}
+              {classesLoading && <div className="text-sm text-gray-600">Loading your classes</div>}
               {classesError && <div className="text-sm text-red-600">{classesError}</div>}
 
               {!classesLoading && !classesError && myClasses.length === 0 && (

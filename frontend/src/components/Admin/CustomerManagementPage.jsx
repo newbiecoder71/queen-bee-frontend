@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatPhoneNumber } from "../../utils/phone";
 
 const emptyForm = {
   _id: "",
@@ -83,7 +84,7 @@ const CustomerManagementPage = () => {
       _id: customer._id,
       name: customer.name || "",
       customerContactEmail: customer.customerContactEmail || "",
-      phone: customer.phone || "",
+      phone: formatPhoneNumber(customer.phone || ""),
       birthdayMonth: customer.birthdayMonth ? String(customer.birthdayMonth) : "",
       birthdayDay: customer.birthdayDay ? String(customer.birthdayDay) : "",
       address: {
@@ -139,7 +140,7 @@ const CustomerManagementPage = () => {
       const payload = {
         name: String(form.name || "").trim(),
         customerContactEmail: String(form.customerContactEmail || "").trim(),
-        phone: String(form.phone || "").trim(),
+        phone: formatPhoneNumber(String(form.phone || "").trim()),
         birthdayMonth: form.birthdayMonth ? Number(form.birthdayMonth) : null,
         birthdayDay: form.birthdayDay ? Number(form.birthdayDay) : null,
         address: {
@@ -318,7 +319,7 @@ const CustomerManagementPage = () => {
                 className="rounded border p-2"
                 placeholder="Phone *"
                 value={form.phone}
-                onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
               />
               <input
                 className="rounded border p-2"

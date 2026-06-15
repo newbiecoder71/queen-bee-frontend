@@ -12,6 +12,7 @@ import {
   removeFromCart,
 } from "../../redux/slices/cartSlice";
 import { Link } from "react-router-dom";
+import { formatPhoneNumber } from "../../utils/phone";
 
 const US_STATES = [
   { code: "AL", name: "Alabama" },
@@ -134,7 +135,7 @@ const Checkout = () => {
       zipCode: prev.zipCode || user?.address?.zip || "",
       state: prev.state || user?.address?.state || "",
       country: prev.country || ((user?.address?.state || addressLine) ? "USA" : ""),
-      phoneNumber: prev.phoneNumber || user?.phone || "",
+      phoneNumber: prev.phoneNumber || formatPhoneNumber(user?.phone || ""),
     }));
   }, [user]);
 
@@ -450,7 +451,7 @@ const Checkout = () => {
               onChange={(e) =>
                 setShippingAddress({
                   ...shippingAddress,
-                  phoneNumber: e.target.value,
+                  phoneNumber: formatPhoneNumber(e.target.value),
                 })
               }
               className="w-full p-2 border rounded"

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatPhoneNumber } from "../../utils/phone";
 
 const MANAGER_DEFAULT_PERMISSIONS = [
   "pos.access",
@@ -107,7 +108,7 @@ const EmployeeManagementPage = () => {
       initialDrafts[emp._id] = {
         name: emp.name || "",
         email: emp.email || "",
-        phone: emp.phone || "",
+        phone: formatPhoneNumber(emp.phone || ""),
         hireDate: formatHireDateForInput(emp.hireDate),
         address: {
           line1: emp.address?.line1 || "",
@@ -192,7 +193,7 @@ const EmployeeManagementPage = () => {
         body: JSON.stringify(employee.role === "admin" ? {
           name: String(draft.name || employee.name || "").trim(),
           email: String(draft.email || employee.email || "").trim(),
-          phone: String(draft.phone || "").trim(),
+          phone: formatPhoneNumber(String(draft.phone || "").trim()),
           hireDate: String(draft.hireDate || "").trim() || null,
           address: {
             line1: String(draft.address?.line1 || "").trim(),
@@ -209,7 +210,7 @@ const EmployeeManagementPage = () => {
         } : {
           name: String(draft.name || employee.name || "").trim(),
           email: String(draft.email || employee.email || "").trim(),
-          phone: String(draft.phone || "").trim(),
+          phone: formatPhoneNumber(String(draft.phone || "").trim()),
           hireDate: String(draft.hireDate || "").trim() || null,
           address: {
             line1: String(draft.address?.line1 || "").trim(),
@@ -508,7 +509,7 @@ const EmployeeManagementPage = () => {
                 <input
                   type="text"
                   value={drafts[selectedEmployee._id]?.phone || ""}
-                  onChange={(e) => updateDraft(selectedEmployee._id, { phone: e.target.value })}
+                  onChange={(e) => updateDraft(selectedEmployee._id, { phone: formatPhoneNumber(e.target.value) })}
                   disabled={modalLocked}
                   className="w-full rounded border px-3 py-2 text-sm disabled:bg-gray-100"
                 />

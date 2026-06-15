@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { formatPhoneNumber } from "../../utils/phone";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -1016,7 +1017,7 @@ const PosManagement = () => {
       setEditingCustomerId(customerId);
       setCustomerForm({
         name: String(data?.name || ""),
-        phone: String(data?.phone || ""),
+        phone: formatPhoneNumber(String(data?.phone || "")),
         customerContactEmail: String(data?.customerContactEmail || ""),
         address: {
           line1: String(data?.address?.line1 || ""),
@@ -1037,7 +1038,7 @@ const PosManagement = () => {
   const saveCustomerForm = async () => {
     const payload = {
       name: String(customerForm?.name || "").trim(),
-      phone: String(customerForm?.phone || "").trim(),
+      phone: formatPhoneNumber(String(customerForm?.phone || "").trim()),
       customerContactEmail: String(customerForm?.customerContactEmail || "").trim(),
       address: {
         line1: String(customerForm?.address?.line1 || "").trim(),
@@ -1067,7 +1068,7 @@ const PosManagement = () => {
               ? {
                   ...row,
                   name: data?.name || row.name,
-                  phone: data?.phone || row.phone,
+                  phone: formatPhoneNumber(data?.phone || row.phone),
                   email: data?.customerContactEmail || row.email,
                 }
               : row
@@ -2589,7 +2590,7 @@ const PosManagement = () => {
                     className="w-full rounded border p-2"
                     placeholder="Phone *"
                     value={customerForm.phone}
-                    onChange={(e) => setCustomerForm((prev) => ({ ...prev, phone: e.target.value }))}
+                    onChange={(e) => setCustomerForm((prev) => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
                   />
                 </div>
                 <input
