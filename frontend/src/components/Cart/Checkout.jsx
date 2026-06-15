@@ -77,6 +77,13 @@ const splitStoredName = (value = "") => {
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
 };
 
+const getShippingPrice = (subtotal) => {
+  if (subtotal > 99) return 0;
+  if (subtotal > 50) return 12.99;
+  if (subtotal > 25) return 9.99;
+  return subtotal > 0 ? 7.99 : 0;
+};
+
 const Checkout = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -163,7 +170,8 @@ const Checkout = () => {
 
   const TAX_RATE = 0.081;
   const tax = +(taxableSubtotal * TAX_RATE).toFixed(2);
-  const grandTotal = +(subtotal + tax).toFixed(2);
+  const shippingPrice = useMemo(() => getShippingPrice(subtotal), [subtotal]);
+  const grandTotal = +(subtotal + tax + shippingPrice).toFixed(2);
 
   /* ---------------------------------------------------------
    * CREATE CHECKOUT (Step 1)
@@ -181,6 +189,7 @@ const Checkout = () => {
         paymentMethod: "Paypal",
         totalPrice: subtotal,
         taxes: tax,
+        shippingPrice,
         grandTotal: grandTotal,
       })
     );
@@ -601,8 +610,9 @@ const Checkout = () => {
         </div>
         <div className="flex justify-between items-center text-base">
           <p>Shipping</p>
-          <p>Free</p>
+          <p>{shippingPrice > 0 ? `$${shippingPrice.toFixed(2)}` : "Free"}</p>
         </div>
+        <p className="mt-2 text-sm text-gray-500">Free shipping on orders over $99.</p>
 
         <div className="flex justify-between items-center text-lg mt-4 border-t pt-4 font-bold">
           <p>Total</p>

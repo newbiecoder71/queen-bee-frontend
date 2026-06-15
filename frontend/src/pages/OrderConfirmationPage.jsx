@@ -36,7 +36,8 @@ const OrderConfirmationPage = () => {
   const items = checkout.checkoutItems || checkout.orderItems || [];
   const grandTotal = Number(checkout.grandTotal || 0);
   const tax = Number(checkout.taxes || 0);
-  const subtotal = Number((grandTotal - tax).toFixed(2));
+  const shippingPrice = Number(checkout.shippingPrice || 0);
+  const subtotal = Number((grandTotal - tax - shippingPrice).toFixed(2));
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white">
@@ -94,6 +95,10 @@ const OrderConfirmationPage = () => {
           <div className="flex justify-between text-lg">
             <p>Tax</p>
             <p>${tax.toFixed(2)}</p>
+          </div>
+          <div className="flex justify-between text-lg">
+            <p>Shipping</p>
+            <p>{shippingPrice > 0 ? `$${shippingPrice.toFixed(2)}` : "Free"}</p>
           </div>
           <div className="flex justify-between text-lg font-bold border-t pt-2">
             <p>Grand Total</p>
