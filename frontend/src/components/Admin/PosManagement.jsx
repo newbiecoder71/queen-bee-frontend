@@ -2093,6 +2093,18 @@ const PosManagement = () => {
                 >
                   Credit Card
                 </button>
+                <button
+                  type="button"
+                  onClick={() => applyRewardCredit(true)} // Function to apply reward
+                  disabled={Number(selectedSession?.customerRewardCreditsAvailable || 0) <= 0}
+                  className={`rounded px-3 py-1 text-sm border ${
+                    Number(selectedSession?.customerRewardCreditsAvailable || 0) > 0
+                      ? "bg-purple-400 border-purple-500 text-white hover:bg-purple-500"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  Use Reward
+                </button>
               </div>
 
               {metaForm.paymentMethod === "gift_card" && (
